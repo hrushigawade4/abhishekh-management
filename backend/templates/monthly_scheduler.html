@@ -1,0 +1,144 @@
+<!-- Trigger Button -->
+<button onclick="openMonthlyPopup()">📅 Monthly Scheduler</button>
+
+<!-- Monthly Scheduler Popup -->
+<div id="monthlyPopup" style="display:none; position:fixed; top:20%; left:30%; background:#fff; border:1px solid #ccc; padding:20px; box-shadow:0 0 10px #aaa; z-index:1000;">
+  <h3>Select Month & Year</h3>
+  <label>Month:
+    <select id="popupMonth">
+      {% for m in range(1, 13) %}
+        <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <br><br>
+  <label>Year:
+    <select id="popupYear">
+      {% for y in range(2024, 2031) %}
+        <option value="{{ y }}">{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <br><br>
+  <button onclick="fetchMonthlySchedule()">Show Schedule</button>
+  <button onclick="closeMonthlyPopup()">Cancel</button>
+</div>
+
+<!-- Schedule Display Area -->
+<div id="scheduleResults"></div>
+
+<!-- JavaScript -->
+<script>
+function openMonthlyPopup() {
+  document.getElementById('monthlyPopup').style.display = 'block';
+}
+
+function closeMonthlyPopup() {
+  document.getElementById('monthlyPopup').style.display = 'none';
+}
+
+function fetchMonthlySchedule() {
+  const month = document.getElementById("popupMonth").value;
+  const year = document.getElementById("popupYear").value;
+
+  fetch('/monthly_scheduler', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ month, year })
+  })
+  .then(res => res.json())
+  .then(data => {
+    renderSchedule(data);
+    closeMonthlyPopup();
+  });
+}
+
+function renderSchedule(data) {
+  const container = document.getElementById("scheduleResults");
+
+  if (data.error) {
+    container.innerHTML = `<p style="color:red;">${data.error}</p>`;
+    return;
+  }
+
+  if (data.length === 0) {
+    container.innerHTML = `<p>No bhakts scheduled for selected month/year.</p>`;
+    return;
+  }
+
+  const abhishekTypes = [...new Set(data.map(d => d.type))];
+
+  const tableRows = data.map(d => `
+    <tr>
+      <td>${d.date}</td>
+      <td>${d.name}</td>
+      <td>${d.gotra}</td>
+      <td>${d.mobile}</td>
+      <td>${d.address}</td>
+      <td>${d.type}</td>
+    </tr>
+  `).join('');
+
+  container.innerHTML = `
+    <h3>📋 Monthly Abhishek Schedule</h3>
+
+    <div style="margin: 10px 0;">
+      <button onclick="exportTableToCSV('abhishek_schedule_all.csv')">Export All to CSV</button>
+
+      <label style="margin-left:20px;">Filter by Abhishek Type:</label>
+      <select id="abhishekFilter" onchange="filterByType()">
+        <option value="All">All</option>
+        ${abhishekTypes.map(t => `<option value="${t}">${t}</option>`).join('')}
+      </select>
+
+      <button onclick="exportFilteredToCSV()" style="margin-left:10px;">Export Filtered</button>
+    </div>
+
+    <table id="scheduleTable" border="1" cellpadding="5">
+      <thead>
+        <tr><th>Date</th><th>Name</th><th>Gotra</th><th>Mobile</th><th>Address</th><th>Type</th></tr>
+      </thead>
+      <tbody>
+        ${tableRows}
+      </tbody>
+    </table>
+  `;
+}
+
+function filterByType() {
+  const type = document.getElementById("abhishekFilter").value;
+  const rows = document.querySelectorAll("#scheduleTable tbody tr");
+  rows.forEach(row => {
+    const abhishekType = row.cells[5].textContent.trim();
+    row.style.display = (type === "All" || abhishekType === type) ? "" : "none";
+  });
+}
+
+function exportTableToCSV(filename) {
+  const allRows = document.querySelectorAll("#scheduleTable tbody tr");
+  exportCSV(allRows, filename);
+}
+
+function exportFilteredToCSV() {
+  const type = document.getElementById("abhishekFilter").value;
+  const rows = [...document.querySelectorAll("#scheduleTable tbody tr")]
+                .filter(row => row.style.display !== 'none');
+  const filename = `abhishek_${type === 'All' ? 'all' : type.toLowerCase()}.csv`;
+  exportCSV(rows, filename);
+}
+
+
+function exportCSV(rows, filename) {
+  let csv = "Date,Name,Gotra,Mobile,Address,Type\n";
+  rows.forEach(row => {
+    const cols = row.querySelectorAll("td");
+    csv += Array.from(cols).map(td => `"${td.innerText}"`).join(",") + "\n";
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+</script>

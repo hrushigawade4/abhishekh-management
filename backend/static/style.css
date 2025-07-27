@@ -1,0 +1,227 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-image: url('/static/swami-bg-pattern.png');
+  background-repeat: repeat;
+  background-size: 200px;
+  margin: 0;
+  padding: 0;
+  color: #333;
+}
+
+/* HEADER SECTION */
+header.header {
+  background-color: #dd7500;
+  color: white;
+  text-align: center;
+  padding: 10px 0 5px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Swami image and title area */
+.swami-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.swami-icon {
+  height: 42px;
+  width: 42px;
+  transition: transform 0.3s ease;
+}
+
+.swami-icon:hover {
+  transform: scale(1.05);
+}
+
+.header-title {
+  font-size: 24px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.system-title {
+  font-size: 16px;
+  margin: 2px 0 5px 0;
+  font-weight: 400;
+  color: #fffce1;
+}
+
+/* Extra image below title */
+.header-image-below {
+  width: 80px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+/* NAVIGATION BUTTONS */
+.nav-buttons {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+  background-color: #fff;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.nav-buttons .button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.nav-buttons button {
+  background-color: #8a3900;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.3s ease;
+}
+
+.nav-buttons button:hover {
+  background-color: #a34700;
+}
+
+/* MAIN CONTENT AREA */
+main.main-content {
+  margin-top: 1rem;
+  padding: 24px;
+  text-align: center;
+}
+
+.main-content h2 {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.main-content p {
+  font-size: 16px;
+}
+
+/* FORM STYLING */
+.form-heading {
+  text-align: center;
+  color: #b45309;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+/* TABLE STYLING */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+}
+
+.table th,
+.table td {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  text-align: left;
+}
+
+.table th {
+  background-color: #f4f4f4;
+}
+
+.table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* STATUS COLORS */
+.row-active {
+  background-color: #e0ffe0 !important;
+}
+.row-warning {
+  background-color: #fffbe6 !important;
+}
+.row-expired {
+  background-color: #ffe0e0 !important;
+}
+
+/* FILTER BUTTONS */
+.filter-buttons {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.filter-buttons button {
+  background-color: #eab308;
+  color: black;
+  border: none;
+  padding: 0.4rem 0.9rem;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filter-buttons button:hover {
+  background-color: #facc15;
+}
+
+/* SEARCH BAR */
+.search-container {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.search-container input[type="text"] {
+  padding: 0.5rem;
+  width: 250px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* SMALL BUTTONS */
+.btn-sm {
+  font-size: 12px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: none;
+  background-color: #0284c7;
+  color: white;
+  cursor: pointer;
+}
+
+.btn-sm:hover {
+  background-color: #0369a1;
+}
+
+/* SPIRITUAL TOUCH */
+a {
+  color: #9a3412;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}

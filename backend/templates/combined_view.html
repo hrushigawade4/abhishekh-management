@@ -1,0 +1,63 @@
+<h2>🧾 Combined View of Scheduled Abhisheks</h2>
+
+<div id="combinedFilters" style="margin-bottom: 10px;">
+  <label><input type="checkbox" onchange="filterCombinedView()" value="Pournima" checked /> Pournima</label>
+  <label><input type="checkbox" onchange="filterCombinedView()" value="Pradosh" checked /> Pradosh</label>
+  <label><input type="checkbox" onchange="filterCombinedView()" value="Guruvar" checked /> Guruvar</label>
+</div>
+
+<table id="combinedAbhishekTable" border="1" cellpadding="5" style="width: 100%; border-collapse: collapse;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th>Date</th>
+      <th>Name</th>
+      <th>Gotra</th>
+      <th>Mobile</th>
+      <th>Address</th>
+      <th>Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- JS will populate this -->
+  </tbody>
+</table>
+
+<script>
+  let allAbhishekData = [];
+
+  async function loadAbhishekData() {
+    try {
+      const response = await fetch('/api/combined_data');
+      allAbhishekData = await response.json();
+      filterCombinedView();
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    }
+  }
+
+  function filterCombinedView() {
+    const selectedTypes = Array.from(
+      document.querySelectorAll('#combinedFilters input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
+
+    const tbody = document.querySelector('#combinedAbhishekTable tbody');
+    tbody.innerHTML = '';
+
+    allAbhishekData.forEach(row => {
+      if (selectedTypes.includes(row.type)) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.date}</td>
+          <td>${row.name}</td>
+          <td>${row.gotra || '-'}</td>
+          <td>${row.mobile}</td>
+          <td>${row.address || '-'}</td>
+          <td>${row.type}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', loadAbhishekData);
+</script>

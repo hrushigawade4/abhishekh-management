@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Abhishek Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <header class="header">
+        <div class="swami-header">
+            <img src="{{ url_for('static', filename='swami_samarth_icon.png') }}" alt="Swami Samarth" class="swami-icon">
+           
+        </div>
+         <h1 class="header-title">|| श्री स्वामी समर्थ ||</h1>
+        <h2 class="system-title">Abhishek Management System</h2>
+        <!-- <img src="{{ url_for('static', filename='19e03f0c-3bc5-4c1d-acac-f6133e0a3ca8.png') }}" alt="Swami Blessing" class="header-image-below"> -->
+    </header>
+
+    <nav class="nav-buttons">
+        <div class="button-grid">
+            <button onclick="loadPage('register_bhakt')">📝 Register Bhakt</button>
+            <button onclick="loadPage('monthly_scheduler')">📅 Monthly Scheduler</button>
+            <button onclick="loadPage('add_sacred_dates')">📜 Add Sacred Dates</button>
+            <button onclick="loadPage('bhakt_status')">📋 Bhakt Status</button>
+            <button onclick="loadPage('combined_view')">🧾 Combined View</button>
+            <button onclick="loadPage('sacred_dates')">🔍 View Sacred Dates</button>
+        </div>
+    </nav>
+
+    <main id="content" class="main-content">
+        <h2>🙏 Welcome!</h2>
+        <p>Use the above options to manage Bhakts, Abhisheks, and Sacred Rituals efficiently.</p>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
