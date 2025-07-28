@@ -1,63 +1,50 @@
-<h2>🧾 Combined View of Scheduled Abhisheks</h2>
+<h2>📋 Combined Abhishek View</h2>
 
-<div id="combinedFilters" style="margin-bottom: 10px;">
-  <label><input type="checkbox" onchange="filterCombinedView()" value="Pournima" checked /> Pournima</label>
-  <label><input type="checkbox" onchange="filterCombinedView()" value="Pradosh" checked /> Pradosh</label>
-  <label><input type="checkbox" onchange="filterCombinedView()" value="Guruvar" checked /> Guruvar</label>
+<div style="margin-bottom: 1rem;">
+  <label style="font-weight: bold;">Filter by Abhishek Types:</label><br />
+  {% for t in abhishek_types %}
+    <label style="margin-right: 10px;">
+      <input type="checkbox" class="type-filter" value="{{ t }}" checked /> {{ t }}
+    </label>
+  {% endfor %}
 </div>
 
-<table id="combinedAbhishekTable" border="1" cellpadding="5" style="width: 100%; border-collapse: collapse;">
-  <thead style="background-color: #f0f0f0;">
-    <tr>
-      <th>Date</th>
-      <th>Name</th>
-      <th>Gotra</th>
-      <th>Mobile</th>
-      <th>Address</th>
-      <th>Type</th>
+
+<table id="combinedTable" style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr style="background-color: #f0f0f0;">
+      <th style="padding: 8px;">Date</th>
+      <th style="padding: 8px;">Name</th>
+      <th style="padding: 8px;">Gotra</th>
+      <th style="padding: 8px;">Mobile</th>
+      <th style="padding: 8px;">Address</th>
+      <th style="padding: 8px;">Abhishek Type</th>
     </tr>
   </thead>
   <tbody>
-    <!-- JS will populate this -->
+    {% for row in abhishek_data %}
+    <tr data-type="{{ row.type }}">
+      <td style="padding: 8px;">{{ row.date }}</td>
+      <td style="padding: 8px;">{{ row.name }}</td>
+      <td style="padding: 8px;">{{ row.gotra }}</td>
+      <td style="padding: 8px;">{{ row.mobile }}</td>
+      <td style="padding: 8px;">{{ row.address }}</td>
+      <td style="padding: 8px;">{{ row.type }}</td>
+    </tr>
+    {% endfor %}
   </tbody>
 </table>
 
 <script>
-  let allAbhishekData = [];
+document.querySelectorAll(".type-filter").forEach(cb => {
+  cb.addEventListener("change", () => {
+    const selected = Array.from(document.querySelectorAll(".type-filter:checked")).map(cb => cb.value.toLowerCase());
+    const rows = document.querySelectorAll("#combinedTable tbody tr");
 
-  async function loadAbhishekData() {
-    try {
-      const response = await fetch('/api/combined_data');
-      allAbhishekData = await response.json();
-      filterCombinedView();
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    }
-  }
-
-  function filterCombinedView() {
-    const selectedTypes = Array.from(
-      document.querySelectorAll('#combinedFilters input[type="checkbox"]:checked')
-    ).map(cb => cb.value);
-
-    const tbody = document.querySelector('#combinedAbhishekTable tbody');
-    tbody.innerHTML = '';
-
-    allAbhishekData.forEach(row => {
-      if (selectedTypes.includes(row.type)) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${row.date}</td>
-          <td>${row.name}</td>
-          <td>${row.gotra || '-'}</td>
-          <td>${row.mobile}</td>
-          <td>${row.address || '-'}</td>
-          <td>${row.type}</td>
-        `;
-        tbody.appendChild(tr);
-      }
+    rows.forEach(row => {
+      const rowType = row.dataset.type.toLowerCase();
+      row.style.display = selected.includes(rowType) ? "" : "none";
     });
-  }
-
-  document.addEventListener('DOMContentLoaded', loadAbhishekData);
+  });
+});
 </script>

@@ -230,6 +230,8 @@ def view_bhakt_status():
     bhakts = Bhakt.query.all()
     return render_template("bhakt_status.html", bhakts=bhakts, current_date=date.today())
 
+from sqlalchemy import distinct
+
 @app.route("/pages/combined_view")
 def combined_view():
     bhakts = Bhakt.query.all()
@@ -252,7 +254,9 @@ def combined_view():
                     "type": sd.abhishek_type.strip()
                 })
 
-    return render_template("combined_view.html", abhishek_data=result)
+    abhishek_types = [row[0] for row in db.session.query(distinct(SacredDate.abhishek_type)).all()]
+
+    return render_template("combined_view.html", abhishek_data=result, abhishek_types=abhishek_types)
 
 
 @app.route("/api/combined_data")
