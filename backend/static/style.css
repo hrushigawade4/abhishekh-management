@@ -17,7 +17,6 @@ header.header {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Swami image and title area */
 .swami-header {
   display: flex;
   flex-direction: row;
@@ -51,7 +50,6 @@ header.header {
   color: #fffce1;
 }
 
-/* Extra image below title */
 .header-image-below {
   width: 80px;
   margin-top: 6px;
@@ -107,33 +105,94 @@ main.main-content {
   font-size: 16px;
 }
 
-/* FORM STYLING */
+/* FORM CONTAINER */
+form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* FORM HEADINGS */
 .form-heading {
   text-align: center;
   color: #b45309;
   font-size: 1.5rem;
   margin-bottom: 1rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-label {
   font-weight: bold;
-  margin-bottom: 0.4rem;
-  display: block;
 }
 
+/* FORM GROUPS */
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+/* FORM LABELS */
+.form-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #333;
+}
+
+/* COMPACT INPUTS */
 .form-control {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #aaa;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid #bbb;
   border-radius: 6px;
-  font-size: 1rem;
+  background-color: #fffefb;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* TABLE STYLING */
+/* Focus Effect */
+.form-control:focus {
+  border-color: #8e44ad;
+  background-color: #fff;
+  outline: none;
+  box-shadow: 0 0 4px rgba(142, 68, 173, 0.2);
+}
+
+/* MULTI-SELECT Abhishek Types */
+#abhishek_types,
+select[multiple] {
+  background-color: #f0f4ff;
+  border: 1px solid #aac4ff;
+  border-radius: 10px;
+  padding: 6px;
+  font-size: 13px;
+  min-height: 100px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#abhishek_types option,
+select[multiple] option {
+  padding: 6px;
+  border-radius: 6px;
+}
+
+#abhishek_types:focus,
+select[multiple]:focus {
+  border-color: #4b6cb7;
+  outline: none;
+  background-color: #fff;
+}
+
+/* SELECTED OPTION STYLE */
+select option:checked {
+  background-color: #e3d8ff;
+  color: #000;
+}
+
+/* RESPONSIVE INPUT FONT */
+@media (max-width: 480px) {
+  .form-control {
+    font-size: 14px;
+  }
+}
+
+/* TABLE */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -155,7 +214,7 @@ main.main-content {
   background-color: #fafafa;
 }
 
-/* STATUS COLORS */
+/* STATUS ROW COLORS */
 .row-active {
   background-color: #e0ffe0 !important;
 }
@@ -216,7 +275,7 @@ main.main-content {
   background-color: #0369a1;
 }
 
-/* SPIRITUAL TOUCH */
+/* SPIRITUAL LINKS */
 a {
   color: #9a3412;
   text-decoration: none;

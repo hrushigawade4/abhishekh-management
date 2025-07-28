@@ -64,7 +64,7 @@ def add_bhakt():
         return jsonify({'error': 'Mobile number already exists'}), 400
 
     try:
-        abhishek_types = ','.join(data['abhishek_type']) if isinstance(data['abhishek_type'], list) else data['abhishek_type']
+        abhishek_types = ','.join(data['abhishek_types']) if isinstance(data['abhishek_types'], list) else data['abhishek_type']
 
         new_bhakt = Bhakt(
             name=data['name'],
@@ -313,16 +313,22 @@ def monthly_scheduler():
 
     return jsonify(result)
 
+# @app.route('/abhishek_types')
+# def get_abhishek_types():
+#     conn = sqlite3.connect('abhishek_management.db')
+#     cursor = conn.cursor()
+
+#     cursor.execute("SELECT DISTINCT occasion FROM sacred_dates")
+#     types = [row[0] for row in cursor.fetchall()]
+
+#     conn.close()
+#     return jsonify(types)
+
 @app.route('/abhishek_types')
 def get_abhishek_types():
-    conn = sqlite3.connect('abhishek_management.db')
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT DISTINCT occasion FROM sacred_dates")
-    types = [row[0] for row in cursor.fetchall()]
-
-    conn.close()
-    return jsonify(types)
+    types = db.session.query(SacredDate.abhishek_type).distinct().all()
+    unique_types = sorted({t[0] for t in types})
+    return jsonify(unique_types)
 
 
 

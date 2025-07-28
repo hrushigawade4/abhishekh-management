@@ -38,8 +38,12 @@ class Bhakt(db.Model):
 
 class SacredDate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    abhishek_type = db.Column(db.String(50), nullable=False) # e.g., Pournima, Guruvar, Pradosh, Custom
-    date = db.Column(db.Date, nullable=False, unique=True) # Ensure no duplicate dates for same type
+    abhishek_type = db.Column(db.String(50), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('abhishek_type', 'date', name='uix_type_date'),
+    )
 
     def __repr__(self):
         return f"<SacredDate {self.abhishek_type} - {self.date}>"
