@@ -85,11 +85,17 @@ function renderSchedule(data) {
     <div style="margin: 10px 0;">
       <button onclick="exportTableToCSV('abhishek_schedule_all.csv')">Export All to CSV</button>
 
-      <label style="margin-left:20px;">Filter by Abhishek Type:</label>
-      <select id="abhishekFilter" onchange="filterByType()">
-        <option value="All">All</option>
-        ${abhishekTypes.map(t => `<option value="${t}">${t}</option>`).join('')}
-      </select>
+     <label style="margin-left:20px;">Filter by Abhishek Type(s):</label>
+<span id="abhishekFilterGroup" style="margin-left:10px;">
+  ${abhishekTypes.map(t => `
+    <label style="margin-right:10px;">
+      <input type="checkbox" class="abhishek-filter" value="${t}" checked> ${t}
+    </label>
+  `).join('')}
+</span>
+
+<button onclick="filterByType()" style="margin-left:10px;">Apply Filter</button>
+
 
       <button onclick="exportFilteredToCSV()" style="margin-left:10px;">Export Filtered</button>
     </div>
@@ -106,13 +112,16 @@ function renderSchedule(data) {
 }
 
 function filterByType() {
-  const type = document.getElementById("abhishekFilter").value;
+  const selected = Array.from(document.querySelectorAll('.abhishek-filter:checked'))
+                        .map(cb => cb.value);
+
   const rows = document.querySelectorAll("#scheduleTable tbody tr");
   rows.forEach(row => {
-    const abhishekType = row.cells[5].textContent.trim();
-    row.style.display = (type === "All" || abhishekType === type) ? "" : "none";
+    const type = row.cells[5].textContent.trim();
+    row.style.display = (selected.includes(type)) ? "" : "none";
   });
 }
+
 
 function exportTableToCSV(filename) {
   const allRows = document.querySelectorAll("#scheduleTable tbody tr");
@@ -120,12 +129,16 @@ function exportTableToCSV(filename) {
 }
 
 function exportFilteredToCSV() {
-  const type = document.getElementById("abhishekFilter").value;
+  const selected = Array.from(document.querySelectorAll('.abhishek-filter:checked'))
+                        .map(cb => cb.value);
+
   const rows = [...document.querySelectorAll("#scheduleTable tbody tr")]
-                .filter(row => row.style.display !== 'none');
-  const filename = `abhishek_${type === 'All' ? 'all' : type.toLowerCase()}.csv`;
+                .filter(row => selected.includes(row.cells[5].textContent.trim()));
+
+  const filename = `abhishek_filtered_${new Date().toISOString().slice(0,10)}.csv`;
   exportCSV(rows, filename);
 }
+
 
 
 function exportCSV(rows, filename) {

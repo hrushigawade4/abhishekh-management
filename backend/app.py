@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect,  url_for
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
@@ -334,6 +334,57 @@ def get_abhishek_types():
     unique_types = sorted({t[0] for t in types})
     return jsonify(unique_types)
 
+
+@app.route('/edit_bhakt/<int:bhakt_id>', methods=['GET'])
+def edit_bhakt_form(bhakt_id):
+    bhakt = Bhakt.query.get_or_404(bhakt_id)
+    return render_template('edit_bhakt.html', bhakt=bhakt)
+
+@app.route('/delete_bhakt/<int:bhakt_id>', methods=['GET'])
+def delete_bhakt_redirect(bhakt_id):
+    try:
+        bhakt = Bhakt.query.get_or_404(bhakt_id)
+        db.session.delete(bhakt)
+        db.session.commit()
+        return redirect('/pages/bhakt_status')
+
+    except Exception as e:
+        db.session.rollback()
+        return f"Error deleting bhakt: {e}", 500
+
+@app.route('/update_bhakt/<int:bhakt_id>', methods=['POST'])
+def update_bhakt_form(bhakt_id):
+    bhakt = Bhakt.query.get_or_404(bhakt_id)
+    try:
+        bhakt.name = request.form['name']
+        bhakt.mobile_number = request.form['mobile_number']
+        bhakt.address = request.form['address']
+        bhakt.gotra = request.form.get('gotra')
+        bhakt.abhishek_types = ','.join(request.form.getlist('abhishek_types[]'))  # ✅ Fixed line
+        bhakt.start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
+        bhakt.validity_months = int(request.form['validity_months'])
+
+        db.session.commit()
+        return redirect('/pages/bhakt_status')
+
+
+    except Exception as e:
+        db.session.rollback()
+        return f"Error updating bhakt: {e}", 500
+
+@app.route('/renew_bhakt/<int:bhakt_id>', methods=['POST'])
+def renew_bhakt(bhakt_id):
+    bhakt = Bhakt.query.get_or_404(bhakt_id)
+    try:
+        # Renew by extending from today
+        bhakt.start_date = datetime.utcnow().date()
+        bhakt.calculate_expiration()
+        db.session.commit()
+        return redirect('/pages/bhakt_status')
+
+    except Exception as e:
+        db.session.rollback()
+        return f"Error renewing bhakt: {e}", 500
 
 
 if __name__ == '__main__':

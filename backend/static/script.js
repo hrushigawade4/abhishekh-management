@@ -108,3 +108,45 @@ async function registerBhakt() {
         alert('An error occurred. Please try again.');
     }
 }
+
+async function updateBhakt(bhaktId) {
+    const form = document.getElementById('editBhaktForm');
+    const formData = new FormData(form);
+
+    const data = {
+        name: formData.get('name'),
+        mobile_number: formData.get('mobile_number'),
+        address: formData.get('address'),
+        gotra: formData.get('gotra'),
+        abhishek_types: Array.from(
+            form.querySelectorAll('input[name="abhishek_types[]"]:checked')
+        ).map(cb => cb.value),
+        start_date: formData.get('start_date'),
+        validity_months: parseInt(formData.get('validity_months')) || 12
+    };
+
+    try {
+        const response = await fetch(`/update_bhakt/${bhaktId}`, {
+            method: 'POST',
+            body: new URLSearchParams(data)
+        });
+
+        if (response.redirected) {
+            // Full redirect occurred (not ideal for SPA)
+            window.location.href = response.url;
+            return;
+        }
+
+        const text = await response.text();
+        if (response.ok) {
+            alert("✅ Bhakt updated successfully");
+            loadPage('bhakt_status'); // 👈 reload bhakt_status in #content
+        } else {
+            console.error("Update failed:", text);
+            alert("❌ Failed to update Bhakt");
+        }
+    } catch (error) {
+        console.error("Error updating Bhakt:", error);
+        alert("⚠️ Error updating Bhakt. See console.");
+    }
+}

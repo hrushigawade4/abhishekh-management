@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Bhakt</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <img src="{{ url_for('static', filename='swami-icon.png') }}" alt="Swami Samarth" class="header-icon">
+      <span class="header-title">|| Shree Swami Samarth ||</span>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <h2 class="form-heading">✏️ Edit Bhakt</h2>
+
+    <form method="POST" action="/update_bhakt/{{ bhakt.id }}" class="form-container" id="editBhaktForm">
+      <!-- Name -->
+      <div class="form-group">
+        <label class="form-label">Name:</label>
+        <input type="text" name="name" value="{{ bhakt.name }}" required class="form-control" />
+      </div>
+
+      <!-- Mobile Number -->
+      <div class="form-group">
+        <label class="form-label">Mobile Number:</label>
+        <input type="text" name="mobile_number" value="{{ bhakt.mobile_number }}" required class="form-control" />
+      </div>
+
+      <!-- Address -->
+      <div class="form-group">
+        <label class="form-label">Address:</label>
+        <input type="text" name="address" value="{{ bhakt.address }}" required class="form-control" />
+      </div>
+
+      <!-- Gotra -->
+      <div class="form-group">
+        <label class="form-label">Gotra:</label>
+        <input type="text" name="gotra" value="{{ bhakt.gotra }}" class="form-control" />
+      </div>
+
+      <!-- Abhishek Types -->
+      <div class="form-group">
+        <label class="form-label">Abhishek Type(s):</label>
+        <div id="abhishek-checkbox-group" class="checkbox-group">
+          <!-- Dynamic checkboxes will be populated here -->
+        </div>
+      </div>
+
+      <!-- Start Date -->
+      <div class="form-group">
+        <label class="form-label">Start Date:</label>
+        <input type="date" name="start_date" value="{{ bhakt.start_date.strftime('%Y-%m-%d') }}" required class="form-control" />
+      </div>
+
+      <!-- Validity -->
+      <div class="form-group">
+        <label class="form-label">Validity (in months):</label>
+        <input type="number" name="validity_months" value="{{ bhakt.validity_months }}" required class="form-control" />
+      </div>
+
+      <!-- Submit & Cancel -->
+      <div class="form-group button-group">
+        <button type="button" class="btn-sm btn-success" onclick="updateBhakt({{ bhakt.id }})">✅ Update Bhakt</button>
+        <a href="{{ url_for('view_bhakt_status') }}" class="btn-sm btn-cancel">❌ Cancel</a>
+      </div>
+    </form>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2025 || Swami Samarth Abhishek Management</p>
+  </footer>
+
+  <!-- JavaScript to load Abhishek Types -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const selectedTypes = "{{ bhakt.abhishek_types }}".split(',').map(s => s.trim());
+
+      fetch('/abhishek_types')
+        .then(res => res.json())
+        .then(types => {
+          const container = document.getElementById('abhishek-checkbox-group');
+          container.innerHTML = '';
+
+          if (types.length === 0) {
+            const msg = document.createElement('p');
+            msg.textContent = "⚠️ No Abhishek Types Found";
+            msg.style.color = "red";
+            container.appendChild(msg);
+          } else {
+            types.forEach(type => {
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.name = 'abhishek_types[]';
+              checkbox.value = type;
+              checkbox.id = 'abhishek_' + type.replace(/\s+/g, '_');
+              if (selectedTypes.includes(type)) checkbox.checked = true;
+
+              const label = document.createElement('label');
+              label.htmlFor = checkbox.id;
+              label.textContent = ' ' + type;
+
+              const wrapper = document.createElement('div');
+              wrapper.classList.add('checkbox-wrapper');
+              wrapper.appendChild(checkbox);
+              wrapper.appendChild(label);
+
+              container.appendChild(wrapper);
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Error loading Abhishek types:", error);
+          alert("⚠️ Failed to load Abhishek Types. See console.");
+        });
+    });
+  </script>
+
+  <!-- ✅ Core script.js import -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>

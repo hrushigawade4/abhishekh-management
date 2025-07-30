@@ -6,8 +6,8 @@
 
   <div class="form-side">
     <div class="top-nav">
-  <button onclick="navigateTo('home')">🏠 Home</button>
-</div>
+      <button onclick="navigateTo('home')">🏠 Home</button>
+    </div>
 
     <h2 class="form-heading">🙏 Register Bhakt</h2>
 
@@ -39,10 +39,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="abhishek_types">Abhishek Type(s):</label>
-        <select class="form-control" id="abhishek_types" name="abhishek_types[]" multiple required size="4">
-          <option value="" disabled selected hidden>Choose Abhishek Type(s)</option>
-        </select>
+        <label class="form-label">Abhishek Type(s):</label>
+        <div id="abhishek-checkbox-group" class="checkbox-group"></div>
       </div>
 
       <div class="form-group">
@@ -60,45 +58,56 @@
   </div>
 </div>
 
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
   // Load Abhishek types
   fetch('/abhishek_types')
     .then(res => res.json())
     .then(types => {
-      const select = document.getElementById('abhishek_types');
-      select.innerHTML = '';
-
-      const placeholder = document.createElement('option');
-      placeholder.textContent = "Choose Abhishek Type(s)";
-      placeholder.disabled = true;
-      placeholder.selected = true;
-      placeholder.hidden = true;
-      select.appendChild(placeholder);
+      const container = document.getElementById('abhishek-checkbox-group');
+      container.innerHTML = '';
 
       if (types.length === 0) {
-        const opt = document.createElement('option');
-        opt.disabled = true;
-        opt.textContent = "⚠️ No Abhishek Types Found";
-        select.appendChild(opt);
+        const msg = document.createElement('p');
+        msg.textContent = "⚠️ No Abhishek Types Found";
+        msg.style.color = "red";
+        container.appendChild(msg);
       } else {
         types.forEach(type => {
-          const opt = document.createElement('option');
-          opt.value = type;
-          opt.textContent = type;
-          select.appendChild(opt);
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.name = 'abhishek_types[]';
+          checkbox.value = type;
+          checkbox.id = 'abhishek_' + type.replace(/\s+/g, '_');
+
+          const label = document.createElement('label');
+          label.htmlFor = checkbox.id;
+          label.textContent = ' ' + type;
+
+          const wrapper = document.createElement('div');
+          wrapper.style.display = 'inline-block';
+          wrapper.style.marginRight = '15px';
+          wrapper.style.marginBottom = '8px';
+          wrapper.appendChild(checkbox);
+          wrapper.appendChild(label);
+
+          container.appendChild(wrapper);
         });
       }
     })
     .catch(error => {
       console.error("Error loading Abhishek types:", error);
-      alert("⚠️ Failed to load Abhishek Types. See console.");
+      Swal.fire("⚠️ Failed to load Abhishek Types", "Please check console for details.", "error");
     });
 
   // Submit logic
   function registerBhakt() {
     const form = document.getElementById("bhaktRegistrationForm");
     const formData = new FormData(form);
-    const selectedTypes = Array.from(document.getElementById("abhishek_types").selectedOptions).map(opt => opt.value);
+    const selectedTypes = Array.from(document.querySelectorAll('input[name="abhishek_types[]"]:checked'))
+                            .map(cb => cb.value);
 
     const data = {
       name: formData.get("name"),
@@ -119,16 +128,21 @@
     .then(res => res.json())
     .then(response => {
       if (response.success) {
-        alert("✅ Bhakt Registered!");
-        form.reset();
-        document.getElementById("abhishek_types").selectedIndex = -1;
+        Swal.fire({
+          icon: "success",
+          title: "Bhakt Registered!",
+          showConfirmButton: false,
+          timer: 1500
+        }).then(() => {
+          window.location.href = "/pages/bhakt_status";  // redirect
+        });
       } else {
-        alert("❌ Error: " + response.error);
+        Swal.fire("Registration Error", response.error || "Please check input.", "error");
       }
     })
     .catch(error => {
       console.error("Registration failed:", error);
-      alert("❌ Something went wrong. Please try again.");
+      Swal.fire("Error", "Something went wrong. Please try again.", "error");
     });
   }
 </script>

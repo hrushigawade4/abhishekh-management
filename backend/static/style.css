@@ -284,3 +284,26 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+.action-btn {
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: white;
+  text-decoration: none;
+  margin-right: 5px;
+}
+
+.edit-btn {
+  background-color: #ffc107;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+}
+
+.renew-btn {
+  background-color: #28a745;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
