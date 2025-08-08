@@ -346,11 +346,10 @@ def delete_bhakt_redirect(bhakt_id):
         bhakt = Bhakt.query.get_or_404(bhakt_id)
         db.session.delete(bhakt)
         db.session.commit()
-        return redirect('/pages/bhakt_status')
-
+        return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        return f"Error deleting bhakt: {e}", 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/update_bhakt/<int:bhakt_id>', methods=['POST'])
 def update_bhakt_form(bhakt_id):
@@ -360,27 +359,30 @@ def update_bhakt_form(bhakt_id):
         bhakt.mobile_number = request.form['mobile_number']
         bhakt.address = request.form['address']
         bhakt.gotra = request.form.get('gotra')
-        bhakt.abhishek_types = ','.join(request.form.getlist('abhishek_types[]'))  # ✅ Fixed line
+        bhakt.abhishek_types = ','.join(request.form.getlist('abhishek_types[]'))
         bhakt.start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
         bhakt.validity_months = int(request.form['validity_months'])
 
         db.session.commit()
-        return redirect('/pages/bhakt_status')
-
-
+        return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        return f"Error updating bhakt: {e}", 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/renew_bhakt/<int:bhakt_id>', methods=['POST'])
 def renew_bhakt(bhakt_id):
     bhakt = Bhakt.query.get_or_404(bhakt_id)
     try:
-        # Renew by extending from today
+        data = request.get_json(silent=True) or {}
+        months = int(data.get('validity_months', 12))
         bhakt.start_date = datetime.utcnow().date()
+        bhakt.validity_months = months
         bhakt.calculate_expiration()
         db.session.commit()
-        return redirect('/pages/bhakt_status')
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
     except Exception as e:
         db.session.rollback()

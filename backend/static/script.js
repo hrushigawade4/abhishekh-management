@@ -98,7 +98,8 @@ async function registerBhakt() {
         const result = await response.json();
 
         if (response.ok) {
-            alert(result.message);
+            // Show a custom success message and keep the user on the registration page
+            alert('Registration successful!');
             form.reset();
         } else {
             alert('Error: ' + result.error);

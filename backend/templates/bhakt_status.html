@@ -42,13 +42,72 @@
           </td>
           <td style="padding: 8px;">
             <a href="/edit_bhakt/{{ b.id }}" class="action-btn edit-btn">✏️ Edit</a>
-            <a href="/delete_bhakt/{{ b.id }}" onclick="return confirm('Are you sure you want to delete this Bhakt?');" class="action-btn delete-btn">🗑️ Delete</a>
-            
+            <button onclick="deleteBhakt({{b.id}}, this);" class="action-btn delete-btn">🗑️ Delete</button>
             {% if b.expiration_date < current_date %}
-            <form action="/renew_bhakt/{{ b.id }}" method="POST" style="display:inline;">
-              <button type="submit" class="action-btn renew-btn">🔄 Renew</button>
-            </form>
+            <button onclick="renewBhakt({{b.id}}, this);" class="action-btn renew-btn">🔄 Renew</button>
             {% endif %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    function deleteBhakt(bhaktId, btn) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: 'This will permanently remove the Bhakt.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/delete_bhakt/${bhaktId}`)
+            .then(res => res.json())
+            .then(response => {
+              if (response.success) {
+                Swal.fire('Deleted!', 'Bhakt has been removed.', 'success');
+                // Remove the row from the table
+                const row = btn.closest('tr');
+                if (row) row.remove();
+              } else {
+                Swal.fire('Error', response.error || 'Failed to delete Bhakt.', 'error');
+              }
+            })
+            .catch(() => Swal.fire('Error', 'Failed to delete Bhakt.', 'error'));
+        }
+      });
+    }
+
+    function renewBhakt(bhaktId, btn) {
+      Swal.fire({
+        title: 'Renew Bhakt',
+        text: 'Enter number of months to renew:',
+        input: 'number',
+        inputAttributes: {
+          min: 1,
+          max: 60,
+          step: 1
+        },
+        inputValue: 12,
+        showCancelButton: true,
+        confirmButtonText: 'Renew'
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          fetch(`/renew_bhakt/${bhaktId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ validity_months: result.value })
+          })
+            .then(res => res.json())
+            .then(response => {
+              if (response.success) {
+                Swal.fire('Renewed!', 'Bhakt has been renewed.', 'success');
+                setTimeout(() => location.reload(), 1000);
+              } else {
+                Swal.fire('Error', response.error || 'Failed to renew Bhakt.', 'error');
+              }
+            })
+            .catch(() => Swal.fire('Error', 'Failed to renew Bhakt.', 'error'));
+        }
+      });
+    }
+  </script>
           </td>
         </tr>
         {% endfor %}
