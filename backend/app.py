@@ -201,23 +201,72 @@ def delete_sacred_date(date_id):
     
 @app.route('/export/monthly_schedule', methods=['GET'])
 def export_monthly_schedule():
-    # (Implement logic to get monthly schedule data similar to /monthly_scheduler route)
-    data_to_export = [] # This will be list of dictionaries for each row
-    # Example:
-    # data_to_export.append({'Name': 'Bhakt A', 'Gotra': 'G', 'Mobile': '123', 'Address': 'XYZ', 'Abhishek Type': 'Pournima', 'Date': '2025-08-01'})
+    from datetime import datetime
+    today = datetime.utcnow().date()
+    month = today.month
+    year = today.year
+    bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
+    sacred_dates = SacredDate.query.all()
+    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
 
+    data_to_export = []
+    seen = set()
+    for sd in filtered_dates:
+        for bhakt in bhakts:
+            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
+            key = (bhakt.id, sd.abhishek_type, sd.date)
+            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
+                data_to_export.append({
+                    'Name': bhakt.name,
+                    'Gotra': bhakt.gotra,
+                    'Mobile': bhakt.mobile_number,
+                    'Address': bhakt.address,
+                    'Abhishek Type': sd.abhishek_type,
+                    'Date': sd.date.strftime('%Y-%m-%d')
+                })
+                seen.add(key)
     if not data_to_export:
         return jsonify({'message': 'No data to export'}), 404
-
     si = StringIO()
     cw = csv.DictWriter(si, fieldnames=data_to_export[0].keys())
     cw.writeheader()
     cw.writerows(data_to_export)
     output = si.getvalue()
-
     response = make_response(output)
     response.headers["Content-Disposition"] = "attachment; filename=monthly_abhishek_schedule.csv"
     response.headers["Content-type"] = "text/csv"
+    return response
+
+@app.route('/export/monthly_schedule_html', methods=['GET'])
+def export_monthly_schedule_html():
+    from datetime import datetime
+    today = datetime.utcnow().date()
+    month = today.month
+    year = today.year
+    bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
+    sacred_dates = SacredDate.query.all()
+    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
+
+    data_to_export = []
+    seen = set()
+    for sd in filtered_dates:
+        for bhakt in bhakts:
+            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
+            key = (bhakt.id, sd.abhishek_type, sd.date)
+            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
+                data_to_export.append({
+                    'Name': bhakt.name,
+                    'Gotra': bhakt.gotra,
+                    'Mobile': bhakt.mobile_number,
+                    'Address': bhakt.address,
+                    'Abhishek_Type': sd.abhishek_type,
+                    'Date': sd.date.strftime('%Y-%m-%d')
+                })
+                seen.add(key)
+    rendered = render_template('monthly_schedule_table.html', schedule=data_to_export)
+    response = make_response(rendered)
+    response.headers['Content-Disposition'] = 'attachment; filename=monthly_abhishek_schedule.html'
+    response.headers['Content-Type'] = 'text/html'
     return response
 
 # @app.route("/bhakt_status")
@@ -295,18 +344,19 @@ def monthly_scheduler():
     data = request.json
     month = int(data.get('month'))
     year = int(data.get('year'))
-
     from datetime import datetime
-    bhakts = Bhakt.query.all()
+    today = datetime.utcnow().date()
+    bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
     sacred_dates = SacredDate.query.all()
-
-    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year]
+    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
 
     result = []
+    seen = set()
     for sd in filtered_dates:
         for bhakt in bhakts:
             bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
-            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date:
+            key = (bhakt.id, sd.abhishek_type, sd.date)
+            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
                 result.append({
                     "date": sd.date.strftime("%Y-%m-%d"),
                     "name": bhakt.name,
@@ -315,7 +365,7 @@ def monthly_scheduler():
                     "address": bhakt.address,
                     "type": sd.abhishek_type
                 })
-
+                seen.add(key)
     return jsonify(result)
 
 # @app.route('/abhishek_types')
@@ -391,6 +441,34 @@ def renew_bhakt(bhakt_id):
         db.session.rollback()
         return f"Error renewing bhakt: {e}", 500
 
+
+@app.route('/view/monthly_schedule', methods=['GET'])
+def view_monthly_schedule():
+    from datetime import datetime
+    today = datetime.utcnow().date()
+    month = today.month
+    year = today.year
+    bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
+    sacred_dates = SacredDate.query.all()
+    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
+
+    data_to_display = []
+    seen = set()
+    for sd in filtered_dates:
+        for bhakt in bhakts:
+            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
+            key = (bhakt.id, sd.abhishek_type, sd.date)
+            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
+                data_to_display.append({
+                    'Name': bhakt.name,
+                    'Gotra': bhakt.gotra,
+                    'Mobile': bhakt.mobile_number,
+                    'Address': bhakt.address,
+                    'Abhishek_Type': sd.abhishek_type,
+                    'Date': sd.date.strftime('%Y-%m-%d')
+                })
+                seen.add(key)
+    return render_template('monthly_schedule_table.html', schedule=data_to_display)
 
 if __name__ == '__main__':
     # This runs Flask in development mode.

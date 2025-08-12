@@ -97,7 +97,8 @@ function renderSchedule(data) {
 <button onclick="filterByType()" style="margin-left:10px;">Apply Filter</button>
 
 
-      <button onclick="exportFilteredToCSV()" style="margin-left:10px;">Export Filtered</button>
+      <button onclick="exportFilteredToCSV()" style="margin-left:10px;">Export Filtered (CSV)</button>
+      <button onclick="exportFilteredToHTML()" style="margin-left:10px;">Export Filtered (HTML Table)</button>
     </div>
 
     <table id="scheduleTable" border="1" cellpadding="5">
@@ -137,6 +138,28 @@ function exportFilteredToCSV() {
 
   const filename = `abhishek_filtered_${new Date().toISOString().slice(0,10)}.csv`;
   exportCSV(rows, filename);
+}
+
+function exportFilteredToHTML() {
+  const selected = Array.from(document.querySelectorAll('.abhishek-filter:checked'))
+                        .map(cb => cb.value);
+  const rows = [...document.querySelectorAll("#scheduleTable tbody tr")]
+                .filter(row => selected.includes(row.cells[5].textContent.trim()));
+  let title = "Abhishek Schedule List";
+  if (selected.length === 1) {
+    title = selected[0] + " abhishekh List";
+  }
+  let html = `<html><head><meta charset='UTF-8'><title>${title}</title><style>table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}th{background:#f2f2f2;}</style></head><body><h2>${title}</h2><table><thead><tr><th>Date</th><th>Name</th><th>Gotra</th><th>Mobile</th><th>Address</th><th>Type</th></tr></thead><tbody>`;
+  rows.forEach(row => {
+    html += `<tr>` + Array.from(row.cells).map(td => `<td>${td.innerText}</td>`).join('') + `</tr>`;
+  });
+  html += `</tbody></table></body></html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `abhishek_filtered_${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
 }
 
 
