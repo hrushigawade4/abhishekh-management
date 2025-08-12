@@ -129,6 +129,13 @@ class BhaktManagementSystem {
     const year = document.getElementById('schedule-year').value;
     window.open(`/export/monthly_schedule_full?month=${month}&year=${year}`, '_blank');
 });
+
+const combinedSearch = document.getElementById('combined-search');
+    if (combinedSearch) {
+        combinedSearch.addEventListener('input', (e) => {
+            this.searchCombinedView(e.target.value);
+        });
+    }
     }
 
     async loadBhakts() {
@@ -187,6 +194,10 @@ class BhaktManagementSystem {
                 break;
         }
     }
+
+    loadCombinedView() {
+    this.searchCombinedView('');
+}
 
     async registerBhakt(formData) {
         try {
@@ -582,6 +593,51 @@ class BhaktManagementSystem {
             }
         }
     }
+
+    searchCombinedView(query) {
+    query = query.trim().toLowerCase();
+    // Prepare the combined data as in loadCombinedView
+    const activeBhakts = this.bhakts.filter(bhakt =>
+        new Date(bhakt.expiration_date) > new Date()
+    );
+    let html = '<div class="combined-section">';
+    html += '<h3>Active Bhakts and Their Sacred Dates</h3>';
+
+    activeBhakts.forEach(bhakt => {
+        const relevantDates = this.sacredDates.filter(date =>
+            (Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types : bhakt.abhishek_types.split(',')).includes(date.abhishek_type)
+        );
+        // Check if any field matches the query
+        const match =
+            bhakt.name.toLowerCase().includes(query) ||
+            (bhakt.mobile_number || bhakt.mobile || '').toLowerCase().includes(query) ||
+            (bhakt.gotra || '').toLowerCase().includes(query) ||
+            (bhakt.address || '').toLowerCase().includes(query) ||
+            (Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types.join(', ') : bhakt.abhishek_types).toLowerCase().includes(query) ||
+            relevantDates.some(date => date.abhishek_type.toLowerCase().includes(query));
+        if (!match && query) return;
+
+        html += `
+            <div class="bhakt-section" style="margin-bottom: 2rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius);">
+                <h4>${bhakt.name} (${bhakt.mobile_number || bhakt.mobile})</h4>
+                <p><strong>Subscribed to:</strong> ${Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types.join(', ') : bhakt.abhishek_types}</p>
+                <p><strong>Valid until:</strong> ${this.formatDate(bhakt.expiration_date)}</p>
+                <p><strong>Upcoming Sacred Dates:</strong></p>
+                <ul>
+        `;
+        relevantDates
+            .filter(date => new Date(date.date) >= new Date())
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .slice(0, 5)
+            .forEach(date => {
+                html += `<li>${date.abhishek_type} - ${this.formatDate(date.date)}</li>`;
+            });
+        html += '</ul></div>';
+    });
+
+    html += '</div>';
+    document.getElementById('combined-content').innerHTML = html;
+}
 
     populateYearSelector() {
         const yearSelect = document.getElementById('schedule-year');
