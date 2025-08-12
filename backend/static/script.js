@@ -57,19 +57,16 @@ function navigateTo(pageName) {
 
 // ✅ Handle hash changes on back/forward/navigation
 function handleHashChange() {
-    const pageName = window.location.hash.substring(1); // Remove "#"
-    if (pageName) {
-        loadPage(pageName);
-    }
+    // No-op: hash navigation removed
 }
 
 // ✅ On first load
 document.addEventListener('DOMContentLoaded', () => {
-    handleHashChange(); // Load correct page if hash exists
+    // No-op: hash navigation removed
 });
 
 // ✅ Listen to browser history changes
-window.addEventListener('hashchange', handleHashChange);
+// hashchange listener removed
 
 // ✅ Example function to register Bhakt (from form in register_bhakt.html)
 async function registerBhakt() {
@@ -141,7 +138,7 @@ async function updateBhakt(bhaktId) {
         const text = await response.text();
         if (response.ok) {
             alert("✅ Bhakt updated successfully");
-            loadPage('bhakt_status'); // 👈 reload bhakt_status in #content
+            window.location.href = '/pages/bhakt_status';
         } else {
             console.error("Update failed:", text);
             alert("❌ Failed to update Bhakt");

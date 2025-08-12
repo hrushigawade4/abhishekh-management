@@ -296,6 +296,7 @@ def monthly_scheduler():
     month = int(data.get('month'))
     year = int(data.get('year'))
 
+    from datetime import datetime
     bhakts = Bhakt.query.all()
     sacred_dates = SacredDate.query.all()
 
@@ -362,9 +363,11 @@ def update_bhakt_form(bhakt_id):
         bhakt.abhishek_types = ','.join(request.form.getlist('abhishek_types[]'))
         bhakt.start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
         bhakt.validity_months = int(request.form['validity_months'])
-
+        # Ensure expiration_date is recalculated
+        bhakt.calculate_expiration()
         db.session.commit()
-        return jsonify({'success': True})
+        next_url = request.form.get('next_url') or '/pages/bhakt_status'
+        return redirect(next_url)
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -41,7 +41,7 @@
             {% endif %}
           </td>
           <td style="padding: 8px;">
-            <a href="/edit_bhakt/{{ b.id }}" class="action-btn edit-btn">✏️ Edit</a>
+            <a href="/edit_bhakt/{{ b.id }}?next={{ request.path }}" class="action-btn edit-btn">✏️ Edit</a>
             <button onclick="deleteBhakt({{b.id}}, this);" class="action-btn delete-btn">🗑️ Delete</button>
             {% if b.expiration_date < current_date %}
             <button onclick="renewBhakt({{b.id}}, this);" class="action-btn renew-btn">🔄 Renew</button>

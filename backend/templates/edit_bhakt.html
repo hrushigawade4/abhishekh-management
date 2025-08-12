@@ -64,10 +64,12 @@
         <input type="number" name="validity_months" value="{{ bhakt.validity_months }}" required class="form-control" />
       </div>
 
+      <!-- Redirect to source page after update -->
+      <input type="hidden" name="next_url" value="{{ next_url }}" />
       <!-- Submit & Cancel -->
       <div class="form-group button-group">
-        <button type="button" class="btn-sm btn-success" onclick="updateBhakt({{ bhakt.id }})">✅ Update Bhakt</button>
-        <a href="{{ url_for('view_bhakt_status') }}" class="btn-sm btn-cancel">❌ Cancel</a>
+        <button type="submit" class="btn-sm btn-success">✅ Update Bhakt</button>
+        <a href="{{ next_url }}" class="btn-sm btn-cancel">❌ Cancel</a>
       </div>
     </form>
   </main>
