@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect,  url_for
+from flask import Flask, request, jsonify, render_template, redirect,  url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
@@ -9,8 +9,10 @@ from flask import make_response
 import sqlite3
 from datetime import date
 import sys
+import smtplib
+from email.message import EmailMessage
 
-
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # from models import SacredDate
 
@@ -591,6 +593,61 @@ def bhakts_expiring_soon():
             'expiration_date': bhakt.expiration_date.isoformat(),
         })
     return jsonify(output)
+
+def check_admin():
+    password = request.args.get('admin_password') or request.form.get('admin_password') or request.headers.get('X-Admin-Password')
+    if password != ADMIN_PASSWORD:
+        abort(403, description="Admin access required.")
+
+@app.route('/backup_db', methods=['GET'])
+def backup_db():
+    check_admin()
+    db_path = os.path.join(basedir, 'abhishek_management.db')
+    return send_file(db_path, as_attachment=True, download_name='abhishek_management_backup.db')
+
+@app.route('/restore_db', methods=['POST'])
+def restore_db():
+    check_admin()
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    file = request.files['file']
+    db_path = os.path.join(basedir, 'abhishek_management.db')
+    file.save(db_path)
+    return jsonify({'message': 'Database restored successfully'})
+
+@app.route('/send_db_backup', methods=['POST'])
+def send_db_backup():
+    check_admin()
+    # Get recipient email from request
+    recipient = request.json.get('email')
+    if not recipient:
+        return jsonify({'error': 'No email provided'}), 400
+
+    db_path = os.path.join(basedir, 'abhishek_management.db')
+    if not os.path.exists(db_path):
+        return jsonify({'error': 'Database file not found'}), 404
+
+    # Gmail SMTP config
+    GMAIL_USER = os.environ.get('GMAIL_USER', 'yourgmail@gmail.com')
+    GMAIL_PASS = os.environ.get('GMAIL_PASS', 'Pass@123')
+
+    msg = EmailMessage()
+    msg['Subject'] = 'Abhishek Management Database Backup'
+    msg['From'] = GMAIL_USER
+    msg['To'] = recipient
+    msg.set_content('Attached is the latest database backup.')
+
+    with open(db_path, 'rb') as f:
+        db_data = f.read()
+        msg.add_attachment(db_data, maintype='application', subtype='octet-stream', filename='abhishek_management.db')
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(GMAIL_USER, GMAIL_PASS)
+            smtp.send_message(msg)
+        return jsonify({'message': 'Backup sent successfully!'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     # This runs Flask in development mode.

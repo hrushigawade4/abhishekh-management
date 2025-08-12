@@ -18,6 +18,8 @@
                     <button class="nav-btn" data-page="sacred-dates">Sacred Dates</button>
                     <button class="nav-btn" data-page="scheduler">Monthly Scheduler</button>
                     <button class="nav-btn" data-page="combined">Combined View</button>
+                    <!-- Add this button to your navbar inside <nav class="nav"> -->
+<button class="nav-btn" data-page="settings">Settings</button>
                 </nav>
             </div>
         </header>
@@ -57,10 +59,12 @@
                             </div>
                         </div>
                     </div>
+                   
                     <div class="recent-activity">
                         <h3>Recent Activity</h3>
                         <div id="recent-activity-list" class="activity-list"></div>
                     </div>
+                    
                 </div>
 
                 <!-- Register Bhakt Page -->
@@ -203,8 +207,25 @@
                     <div id="combined-content" class="combined-content"></div>
                 </div>
             </div>
+            <div id="settings" class="page">
+    <h2>Settings</h2>
+     <button id="backup-db" class="btn btn-outline">Backup Database</button>
+<form id="restore-db-form" enctype="multipart/form-data" style="display:inline;">
+    <input type="file" id="restore-db-file" name="file" style="display:none;">
+    <button type="button" id="restore-db-btn" class="btn btn-outline">Restore Database</button>
+</form>
+<div style="margin-top:20px;">
+    <input type="email" id="backup-email" placeholder="Enter Gmail address" class="form-control" style="max-width:220px;">
+    <button id="send-db-backup" class="btn btn-outline">Send DB Backup to Gmail</button>
+</div>
+    <p style="font-size:10px; color:#bbb; margin-top:20px; opacity:0.5;">
+        Admin access required for backup and restore.
+    </p>
+</div>
         </main>
     </div>
+
+    
 
     <!-- Modal for editing -->
     <div id="edit-modal" class="modal">

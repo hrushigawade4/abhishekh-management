@@ -120,6 +120,31 @@ class BhaktManagementSystem {
         }
     });
 
+    document.getElementById('send-db-backup').addEventListener('click', async () => {
+    const email = document.getElementById('backup-email').value.trim();
+    if (!email) {
+        alert('Please enter a Gmail address.');
+        return;
+    }
+    const adminPassword = prompt('Enter admin password for sending backup:');
+    if (!adminPassword) return;
+    try {
+        const response = await fetch('/send_db_backup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, admin_password: adminPassword })
+        });
+        const result = await response.json();
+        if (response.ok) {
+            alert(result.message || 'Backup sent!');
+        } else {
+            alert(result.error || 'Failed to send backup.');
+        }
+    } catch (error) {
+        alert('Error sending backup: ' + error.message);
+    }
+});
+
     // document.getElementById('print-schedule').addEventListener('click', () => {
     // window.print();
     // });
@@ -147,12 +172,44 @@ class BhaktManagementSystem {
     window.open(`/export/monthly_schedule_full?month=${month}&year=${year}`, '_blank');
 });
 
+document.getElementById('backup-db').addEventListener('click', () => {
+    const adminPassword = prompt('Enter admin password for backup:');
+    if (!adminPassword) return;
+    window.open(`/backup_db?admin_password=${encodeURIComponent(adminPassword)}`, '_blank');
+});
+
+document.getElementById('restore-db-btn').addEventListener('click', () => {
+    document.getElementById('restore-db-file').click();
+});
+
+document.getElementById('restore-db-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const adminPassword = prompt('Enter admin password for restore:');
+    if (!adminPassword) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('admin_password', adminPassword);
+    try {
+        const response = await fetch('/restore_db', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        alert(result.message || 'Database restored!');
+        window.location.reload();
+    } catch (error) {
+        alert('Error restoring database: ' + error.message);
+    }
+});
+
 const combinedSearch = document.getElementById('combined-search');
     if (combinedSearch) {
         combinedSearch.addEventListener('input', (e) => {
             this.searchCombinedView(e.target.value);
         });
     }
+
 }
 
     async loadBhakts() {
@@ -503,8 +560,9 @@ const combinedSearch = document.getElementById('combined-search');
         }
     }
 
-    async deleteBhakt(id) {
-        if (confirm('Are you sure you want to delete this bhakt?')) {
+   async deleteBhakt(id) {
+    if (confirm('Are you sure you want to delete this bhakt?')) {
+        if (confirm('This action cannot be undone. Do you really want to delete this bhakt?')) {
             try {
                 const response = await fetch(`/bhakts/${id}`, { method: 'DELETE' });
                 const result = await response.json();
@@ -517,6 +575,7 @@ const combinedSearch = document.getElementById('combined-search');
             }
         }
     }
+}
 
    async editSacredDate(id) {
     const sacredDate = this.sacredDates.find(d => d.id === id);
