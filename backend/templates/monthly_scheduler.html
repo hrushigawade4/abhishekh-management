@@ -124,20 +124,55 @@ function filterByType() {
 }
 
 
+
 function exportTableToCSV(filename) {
-  const allRows = document.querySelectorAll("#scheduleTable tbody tr");
-  exportCSV(allRows, filename);
+  // Find all rows with the date nearest to today (not in the past)
+  const allRows = Array.from(document.querySelectorAll("#scheduleTable tbody tr"));
+  const today = new Date();
+  let minDiff = Infinity;
+  let nearestDate = null;
+  allRows.forEach(row => {
+    const dateStr = row.cells[0].innerText.trim();
+    const rowDate = new Date(dateStr);
+    const diff = rowDate - today;
+    if (diff >= 0 && diff < minDiff) {
+      minDiff = diff;
+      nearestDate = dateStr;
+    }
+  });
+  if (nearestDate) {
+    const nearestRows = allRows.filter(row => row.cells[0].innerText.trim() === nearestDate);
+    exportCSV(nearestRows, filename);
+  } else {
+    alert("No upcoming dates found.");
+  }
 }
+
 
 function exportFilteredToCSV() {
   const selected = Array.from(document.querySelectorAll('.abhishek-filter:checked'))
                         .map(cb => cb.value);
-
   const rows = [...document.querySelectorAll("#scheduleTable tbody tr")]
                 .filter(row => selected.includes(row.cells[5].textContent.trim()));
-
+  const today = new Date();
+  let minDiff = Infinity;
+  let nearestDate = null;
+  rows.forEach(row => {
+    const dateStr = row.cells[0].innerText.trim();
+    const rowDate = new Date(dateStr);
+    const diff = rowDate - today;
+    if (diff >= 0 && diff < minDiff) {
+      minDiff = diff;
+      nearestDate = dateStr;
+    }
+  });
   const filename = `abhishek_filtered_${new Date().toISOString().slice(0,10)}.csv`;
-  exportCSV(rows, filename);
+  if (nearestDate) {
+    const nearestRows = rows.filter(row => row.cells[0].innerText.trim() === nearestDate);
+    exportCSV(nearestRows, filename);
+  } else {
+    alert("No upcoming dates found for selected type(s).");
+  }
 }
 
 function exportFilteredToHTML() {
@@ -145,14 +180,31 @@ function exportFilteredToHTML() {
                         .map(cb => cb.value);
   const rows = [...document.querySelectorAll("#scheduleTable tbody tr")]
                 .filter(row => selected.includes(row.cells[5].textContent.trim()));
+  const today = new Date();
+  let minDiff = Infinity;
+  let nearestDate = null;
+  rows.forEach(row => {
+    const dateStr = row.cells[0].innerText.trim();
+    const rowDate = new Date(dateStr);
+    const diff = rowDate - today;
+    if (diff >= 0 && diff < minDiff) {
+      minDiff = diff;
+      nearestDate = dateStr;
+    }
+  });
   let title = "Abhishek Schedule List";
   if (selected.length === 1) {
     title = selected[0] + " abhishekh List";
   }
   let html = `<html><head><meta charset='UTF-8'><title>${title}</title><style>table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}th{background:#f2f2f2;}</style></head><body><h2>${title}</h2><table><thead><tr><th>Date</th><th>Name</th><th>Gotra</th><th>Mobile</th><th>Address</th><th>Type</th></tr></thead><tbody>`;
-  rows.forEach(row => {
-    html += `<tr>` + Array.from(row.cells).map(td => `<td>${td.innerText}</td>`).join('') + `</tr>`;
-  });
+  if (nearestDate) {
+    const nearestRows = rows.filter(row => row.cells[0].innerText.trim() === nearestDate);
+    nearestRows.forEach(row => {
+      html += `<tr>` + Array.from(row.cells).map(td => `<td>${td.innerText}</td>`).join('') + `</tr>`;
+    });
+  } else {
+    html += `<tr><td colspan='6'>No upcoming dates found for selected type(s).</td></tr>`;
+  }
   html += `</tbody></table></body></html>`;
   const blob = new Blob([html], { type: 'text/html' });
   const url = window.URL.createObjectURL(blob);
