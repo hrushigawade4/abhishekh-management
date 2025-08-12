@@ -35,7 +35,7 @@ def create_tables():
 @app.route('/')
 def index():
     """Renders the main index.html page."""
-    return render_template('index.html')
+    return render_template('index.html',year=datetime.now().year)
 
 @app.route('/pages/<page_name>')
 def serve_page_partial(page_name):
@@ -469,6 +469,103 @@ def view_monthly_schedule():
                 })
                 seen.add(key)
     return render_template('monthly_schedule_table.html', schedule=data_to_display)
+
+@app.route('/export/bhakts', methods=['GET'])
+def export_bhakts():
+    bhakts = Bhakt.query.all()
+    if not bhakts:
+        return jsonify({'message': 'No bhakts to export'}), 404
+    si = StringIO()
+    fieldnames = ['Name', 'Mobile', 'Email', 'Gotra', 'Address', 'Abhishek Types', 'Start Date', 'Validity (Months)', 'Expiration Date']
+    cw = csv.DictWriter(si, fieldnames=fieldnames)
+    cw.writeheader()
+    for b in bhakts:
+        cw.writerow({
+            'Name': b.name,
+            'Mobile': b.mobile_number,
+            'Email': b.email_address,
+            'Gotra': b.gotra,
+            'Address': b.address,
+            'Abhishek Types': b.abhishek_types,
+            'Start Date': b.start_date.strftime('%Y-%m-%d'),
+            'Validity (Months)': b.validity_months,
+            'Expiration Date': b.expiration_date.strftime('%Y-%m-%d')
+        })
+    output = si.getvalue()
+    response = make_response(output)
+    response.headers["Content-Disposition"] = "attachment; filename=bhakts.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
+
+@app.route('/bhakts/expired_last_month', methods=['GET'])
+def bhakts_expired_last_month():
+    today = datetime.utcnow().date()
+    first_day_this_month = today.replace(day=1)
+    last_day_last_month = first_day_this_month - timedelta(days=1)
+    first_day_last_month = last_day_last_month.replace(day=1)
+
+    expired_bhakts = Bhakt.query.filter(
+        Bhakt.expiration_date >= first_day_last_month,
+        Bhakt.expiration_date <= last_day_last_month
+    ).all()
+
+    output = []
+    for bhakt in expired_bhakts:
+        output.append({
+            'id': bhakt.id,
+            'name': bhakt.name,
+            'mobile_number': bhakt.mobile_number,
+            'address': bhakt.address,
+            'gotra': bhakt.gotra,
+            'email_address': bhakt.email_address,
+            'abhishek_types': bhakt.abhishek_types.split(',') if bhakt.abhishek_types else [],
+            'start_date': bhakt.start_date.isoformat(),
+            'validity_months': bhakt.validity_months,
+            'expiration_date': bhakt.expiration_date.isoformat(),
+        })
+    return jsonify(output)
+
+@app.route('/export/monthly_schedule_full', methods=['GET'])
+def export_monthly_schedule_full():
+    # Get month and year from query params
+    month = int(request.args.get('month', datetime.utcnow().month))
+    year = int(request.args.get('year', datetime.utcnow().year))
+    today = datetime.utcnow().date()
+    bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
+    sacred_dates = SacredDate.query.all()
+    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year]
+
+    data_to_export = []
+    seen = set()
+    for sd in filtered_dates:
+        for bhakt in bhakts:
+            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
+            key = (bhakt.id, sd.abhishek_type, sd.date)
+            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
+                data_to_export.append({
+                    'Date': sd.date.strftime('%Y-%m-%d'),
+                    'Day': sd.date.strftime('%A'),
+                    'Abhishek Type': sd.abhishek_type,
+                    'Name': bhakt.name,
+                    'Gotra': bhakt.gotra,
+                    'Mobile': bhakt.mobile_number,
+                    'Email': bhakt.email_address,
+                    'Address': bhakt.address,
+                    'Validity (Months)': bhakt.validity_months,
+                    'Expiration Date': bhakt.expiration_date.strftime('%Y-%m-%d')
+                })
+                seen.add(key)
+    if not data_to_export:
+        return jsonify({'message': 'No data to export'}), 404
+    si = StringIO()
+    cw = csv.DictWriter(si, fieldnames=data_to_export[0].keys())
+    cw.writeheader()
+    cw.writerows(data_to_export)
+    output = si.getvalue()
+    response = make_response(output)
+    response.headers["Content-Disposition"] = f"attachment; filename=monthly_schedule_{month}_{year}.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
 
 if __name__ == '__main__':
     # This runs Flask in development mode.

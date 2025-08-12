@@ -1,38 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Abhishek Management System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhakt Management System</title>
+   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <header class="header">
-        <div class="swami-header">
-            <img src="{{ url_for('static', filename='swami_samarth_icon.png') }}" alt="Swami Samarth" class="swami-icon">
-           
+    <div id="app">
+        <header class="header">
+            <div class="container">
+                <h1 class="logo">|| श्री स्वामी समर्थ ||</h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-page="register">Register Bhakt</button>
+                    <button class="nav-btn" data-page="bhakts">Manage Bhakts</button>
+                    <button class="nav-btn" data-page="sacred-dates">Sacred Dates</button>
+                    <button class="nav-btn" data-page="scheduler">Monthly Scheduler</button>
+                    <button class="nav-btn" data-page="combined">Combined View</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container">
+                <!-- Dashboard Page -->
+                <div id="dashboard" class="page active">
+                    <h2>Dashboard</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-content">
+                                <h3 id="total-bhakts">0</h3>
+                                <p>Total Bhakts</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-content">
+                                <h3 id="active-subscriptions">0</h3>
+                                <p>Active Subscriptions</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-content">
+                                <h3 id="sacred-dates-count">0</h3>
+                                <p>Sacred Dates</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏰</div>
+                            <div class="stat-content">
+                                <h3 id="expiring-soon">0</h3>
+                                <p>Expiring Soon</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="recent-activity">
+                        <h3>Recent Activity</h3>
+                        <div id="recent-activity-list" class="activity-list"></div>
+                    </div>
+                </div>
+
+                <!-- Register Bhakt Page -->
+                <div id="register" class="page">
+                    <h2>Register New Bhakt</h2>
+                    <form id="register-form" class="form">
+                        <div class="form-group">
+                            <label for="name">Name *</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile">Mobile Number *</label>
+                            <input type="tel" id="mobile" name="mobile" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="gotra">Gotra</label>
+                            <input type="text" id="gotra" name="gotra">
+                        </div>
+                        <div class="form-group">
+                            <label for="address">Address *</label>
+                            <textarea id="address" name="address" required></textarea>
+                        </div>
+                       <div class="form-group">
+    <label>Abhishek Types *</label>
+    <div class="checkbox-group" id="abhishek-types">
+        <!-- Checkboxes will be injected here by JS -->
+    </div>
+</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="start-date">Start Date *</label>
+                                <input type="date" id="start-date" name="start_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="validity">Validity (Months) *</label>
+                                <select id="validity" name="validity_months" required>
+                                    <option value="">Select validity</option>
+                                    <option value="1">1 Month</option>
+                                    <option value="3">3 Months</option>
+                                    <option value="6">6 Months</option>
+                                    <option value="12">12 Months</option>
+                                    <option value="24">24 Months</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Register Bhakt</button>
+                    </form>
+                </div>
+
+                <!-- Manage Bhakts Page -->
+                <div id="bhakts" class="page">
+                    <div class="page-header">
+                        <h2>Manage Bhakts</h2>
+                        <div class="search-box">
+                            <input type="text" id="bhakt-search" placeholder="Search bhakts...">
+                        </div>
+                    </div>
+                    <button id="export-bhakts" class="btn btn-outline">Export Bhakt List</button>
+                    <button id="show-expired-bhakts" class="btn btn-outline">Show Bhakts Expired Last Month</button>
+                    <div class="table-container">
+                        <table id="bhakts-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Mobile</th>
+                                    <th>Gotra</th>
+                                    <th>Abhishek Types</th>
+                                    <th>Expiration</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bhakts-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sacred Dates Page -->
+                <div id="sacred-dates" class="page">
+                    <div class="page-header">
+                        <h2>Sacred Dates Management</h2>
+                        <button id="add-sacred-date-btn" class="btn btn-primary">Add Sacred Date</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="sacred-dates-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Abhishek Type</th>
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sacred-dates-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Monthly Scheduler Page -->
+                <div id="scheduler" class="page">
+                    <div class="page-header">
+                        <h2>Monthly Scheduler</h2>
+                        <div class="scheduler-controls">
+                            <select id="schedule-month">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select id="schedule-year"></select>
+                            <button id="generate-schedule" class="btn btn-secondary">Generate</button>
+                            <button id="export-csv" class="btn btn-outline">Export CSV</button>
+                            <button id="export-html" class="btn btn-outline">Export HTML</button>
+                            <button id="export-full-schedule" class="btn btn-outline">Export Full Monthly Schedule</button>
+                        </div>
+                    </div>
+                    <div id="schedule-content" class="schedule-content"></div>
+                </div>
+
+                <!-- Combined View Page -->
+                <div id="combined" class="page">
+                    <h2>Combined View - Bhakts & Sacred Dates</h2>
+                    <div id="combined-content" class="combined-content"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for editing -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="modal-title">Edit</h3>
+            <div id="modal-body"></div>
         </div>
-         <h1 class="header-title">|| श्री स्वामी समर्थ ||</h1>
-        <h2 class="system-title">Abhishek Management System</h2>
-        <!-- <img src="{{ url_for('static', filename='19e03f0c-3bc5-4c1d-acac-f6133e0a3ca8.png') }}" alt="Swami Blessing" class="header-image-below"> -->
-    </header>
+    </div>
 
-    <nav class="nav-buttons">
-        <div class="button-grid">
-            <button onclick="loadPage('register_bhakt')">📝 Register Bhakt</button>
-            <button onclick="loadPage('monthly_scheduler')">📅 Monthly Scheduler</button>
-            <button onclick="loadPage('add_sacred_dates')">📜 Add Sacred Dates</button>
-            <button onclick="loadPage('bhakt_status')">📋 Bhakt Status</button>
-            <button onclick="loadPage('combined_view')">🧾 Combined View</button>
-            <button onclick="loadPage('sacred_dates')">🔍 View Sacred Dates</button>
-        </div>
-    </nav>
+    <!-- Modal for sacred date form -->
+<div id="sacred-date-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Add Sacred Date</h3>
+        <form id="sacred-date-form" class="form">
+            <div class="form-group">
+                <label for="sacred-abhishek-type">Abhishek Type *</label>
+                <select id="sacred-abhishek-type" name="abhishek_type" required>
+                    <option value="">Select type</option>
+                    <!-- Options will be injected by JS -->
+                </select>
+                <div style="margin-top:8px;">
+                    <input type="text" id="new-abhishek-type" placeholder="Add new type (optional)">
+                    <button type="button" id="add-new-abhishek-type" class="btn btn-secondary" style="margin-left:8px;">Add</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="sacred-date">Date *</label>
+                <input type="date" id="sacred-date" name="date" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Sacred Date</button>
+        </form>
+    </div>
+</div>
 
-    <main id="content" class="main-content">
-        <h2>🙏 Welcome!</h2>
-        <p>Use the above options to manage Bhakts, Abhisheks, and Sacred Rituals efficiently.</p>
-    </main>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
+ <footer style="font-size:10px; color:#bbb; text-align:center; margin-top:30px; opacity:0.5;">
+       &copy; {{ year }} | Made by Hrushi Sonke & Hrushi Gawade
+    </footer>   
 </body>
 </html>
