@@ -124,6 +124,23 @@ class BhaktManagementSystem {
     // window.print();
     // });
 
+    document.getElementById('show-expiring-soon-bhakts').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/bhakts/expiring_soon');
+        if (!response.ok) throw new Error('Failed to fetch expiring soon bhakts');
+        const expiringBhakts = await response.json();
+        const tbody = document.getElementById('bhakts-tbody');
+        if (tbody) {
+            tbody.innerHTML = expiringBhakts.map(bhakt => this.createBhaktRow(bhakt)).join('');
+        }
+        // Optionally, switch to the Manage Bhakts page
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        document.getElementById('bhakts').classList.add('active');
+    } catch (error) {
+        alert('Error loading expiring soon bhakts: ' + error.message);
+    }
+});
+
     document.getElementById('export-full-schedule').addEventListener('click', () => {
     const month = document.getElementById('schedule-month').value;
     const year = document.getElementById('schedule-year').value;
@@ -136,7 +153,7 @@ const combinedSearch = document.getElementById('combined-search');
             this.searchCombinedView(e.target.value);
         });
     }
-    }
+}
 
     async loadBhakts() {
         try {

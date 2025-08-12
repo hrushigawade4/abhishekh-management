@@ -567,6 +567,31 @@ def export_monthly_schedule_full():
     response.headers["Content-type"] = "text/csv"
     return response
 
+@app.route('/bhakts/expiring_soon', methods=['GET'])
+def bhakts_expiring_soon():
+    today = datetime.utcnow().date()
+    thirty_days_from_now = today + timedelta(days=30)
+    expiring_bhakts = Bhakt.query.filter(
+        Bhakt.expiration_date > today,
+        Bhakt.expiration_date <= thirty_days_from_now
+    ).all()
+
+    output = []
+    for bhakt in expiring_bhakts:
+        output.append({
+            'id': bhakt.id,
+            'name': bhakt.name,
+            'mobile_number': bhakt.mobile_number,
+            'address': bhakt.address,
+            'gotra': bhakt.gotra,
+            'email_address': bhakt.email_address,
+            'abhishek_types': bhakt.abhishek_types.split(',') if bhakt.abhishek_types else [],
+            'start_date': bhakt.start_date.isoformat(),
+            'validity_months': bhakt.validity_months,
+            'expiration_date': bhakt.expiration_date.isoformat(),
+        })
+    return jsonify(output)
+
 if __name__ == '__main__':
     # This runs Flask in development mode.
     # For production, we'll use a production-ready WSGI server like Waitress.
