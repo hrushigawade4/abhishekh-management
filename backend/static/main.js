@@ -120,6 +120,17 @@ class BhaktManagementSystem {
         }
     });
 
+    document.getElementById('export-filtered-csv').addEventListener('click', () => {
+    const month = parseInt(document.getElementById('schedule-month').value);
+    const year = parseInt(document.getElementById('schedule-year').value);
+    const abhishekType = document.getElementById('abhishek-type-filter').value;
+    if (!abhishekType) {
+        alert('Please select an Abhishek Type.');
+        return;
+    }
+    window.open(`/export/monthly_schedule_filtered?month=${month}&year=${year}&abhishek_type=${encodeURIComponent(abhishekType)}`, '_blank');
+});
+
     document.getElementById('send-db-backup').addEventListener('click', async () => {
     const email = document.getElementById('backup-email').value.trim();
     if (!email) {
@@ -727,6 +738,20 @@ const combinedSearch = document.getElementById('combined-search');
         }
     }
 
+    populateAbhishekTypeFilter(month, year) {
+    // Get all sacred dates for selected month/year
+    const monthSacredDates = this.sacredDates.filter(date => {
+        const d = new Date(date.date);
+        return d.getMonth() + 1 === month && d.getFullYear() === year;
+    });
+    // Get unique abhishek types
+    const types = [...new Set(monthSacredDates.map(date => date.abhishek_type))];
+    const select = document.getElementById('abhishek-type-filter');
+    if (select) {
+        select.innerHTML = '<option value="">Select Abhishek Type</option>' +
+            types.map(type => `<option value="${type}">${type}</option>`).join('');
+    }
+}
     setDefaultDate() {
         const now = new Date();
         const startDateInput = document.getElementById('start-date');
@@ -745,6 +770,7 @@ const combinedSearch = document.getElementById('combined-search');
         setTimeout(() => {
             const schedule = this.createMonthlySchedule(month, year);
             scheduleContent.innerHTML = schedule;
+            this.populateAbhishekTypeFilter(month, year); // <-- Add this line
         }, 500);
     }
 

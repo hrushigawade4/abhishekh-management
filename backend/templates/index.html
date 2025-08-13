@@ -170,33 +170,48 @@
                 </div>
 
                 <!-- Monthly Scheduler Page -->
-                <div id="scheduler" class="page">
-                    <div class="page-header">
-                        <h2>Monthly Scheduler</h2>
-                        <div class="scheduler-controls">
-                            <select id="schedule-month">
-                                <option value="1">January</option>
-                                <option value="2">February</option>
-                                <option value="3">March</option>
-                                <option value="4">April</option>
-                                <option value="5">May</option>
-                                <option value="6">June</option>
-                                <option value="7">July</option>
-                                <option value="8">August</option>
-                                <option value="9">September</option>
-                                <option value="10">October</option>
-                                <option value="11">November</option>
-                                <option value="12">December</option>
-                            </select>
-                            <select id="schedule-year"></select>
-                            <button id="generate-schedule" class="btn btn-secondary">Generate</button>
-                            <button id="export-csv" class="btn btn-outline">Export CSV</button>
-                            <button id="export-html" class="btn btn-outline">Export HTML</button>
-                            <button id="export-full-schedule" class="btn btn-outline">Export Full Monthly Schedule</button>
-                        </div>
-                    </div>
-                    <div id="schedule-content" class="schedule-content"></div>
-                </div>
+             <div id="scheduler" class="page">
+    <div class="page-header">
+        <h2>Monthly Scheduler</h2>
+        <div class="scheduler-controls">
+            <!-- Step 1: Select month and year -->
+            <label for="schedule-month" style="margin-right:8px;">Month:</label>
+            <select id="schedule-month">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+            <label for="schedule-year" style="margin:0 8px;">Year:</label>
+            <select id="schedule-year"></select>
+            <button id="generate-schedule" class="btn btn-secondary" style="margin-left:8px;">Generate</button>
+        </div>
+        <div class="scheduler-controls" style="margin-top:16px;">
+            <!-- Step 2: Select Abhishek Type and export filtered CSV -->
+            <label for="abhishek-type-filter" style="margin-right:8px;">Abhishek Type:</label>
+            <select id="abhishek-type-filter">
+                <option value="">Select Abhishek Type</option>
+                <!-- Options will be injected by JS -->
+            </select>
+            <button id="export-filtered-csv" class="btn btn-outline" style="margin-left:8px;">Export Filtered CSV</button>
+        </div>
+        <div class="scheduler-controls" style="margin-top:16px;">
+            <!-- Other export options -->
+            <button id="export-csv" class="btn btn-outline">Export CSV</button>
+            <button id="export-html" class="btn btn-outline">Export HTML</button>
+            <button id="export-full-schedule" class="btn btn-outline">Export Full Monthly Schedule</button>
+        </div>
+    </div>
+    <div id="schedule-content" class="schedule-content"></div>
+</div>
 
                 <!-- Combined View Page -->
                 <div id="combined" class="page">

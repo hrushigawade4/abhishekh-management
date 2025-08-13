@@ -649,6 +649,51 @@ def send_db_backup():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/export/monthly_schedule_filtered', methods=['GET'])
+def export_monthly_schedule_filtered():
+    month = int(request.args.get('month', datetime.utcnow().month))
+    year = int(request.args.get('year', datetime.utcnow().year))
+    abhishek_type = request.args.get('abhishek_type', '')
+    today = datetime.utcnow().date()
+    bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
+    sacred_dates = SacredDate.query.filter(
+        SacredDate.abhishek_type == abhishek_type
+    ).all()
+    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year]
+
+    data_to_export = []
+    seen = set()
+    for sd in filtered_dates:
+        for bhakt in bhakts:
+            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
+            key = (bhakt.id, sd.abhishek_type, sd.date)
+            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
+                data_to_export.append({
+                    'Date': sd.date.strftime('%Y-%m-%d'),
+                    'Day': sd.date.strftime('%A'),
+                    'Abhishek Type': sd.abhishek_type,
+                    'Name': bhakt.name,
+                    'Gotra': bhakt.gotra,
+                    'Mobile': bhakt.mobile_number,
+                    'Email': bhakt.email_address,
+                    'Address': bhakt.address,
+                    'Validity (Months)': bhakt.validity_months,
+                    'Expiration Date': bhakt.expiration_date.strftime('%Y-%m-%d')
+                })
+                seen.add(key)
+    if not data_to_export:
+        return jsonify({'message': 'No data to export'}), 404
+    si = StringIO()
+    cw = csv.DictWriter(si, fieldnames=data_to_export[0].keys())
+    cw.writeheader()
+    cw.writerows(data_to_export)
+    output = si.getvalue()
+    response = make_response(output)
+    response.headers["Content-Disposition"] = f"attachment; filename={abhishek_type}_{month}_{year}_schedule.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
+
 if __name__ == '__main__':
     # This runs Flask in development mode.
     # For production, we'll use a production-ready WSGI server like Waitress.
