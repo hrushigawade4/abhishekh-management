@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template, redirect,  url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 import os
 from models import db, Bhakt, SacredDate # Import models from models.py
 import csv
@@ -11,6 +11,7 @@ from datetime import date
 import sys
 import smtplib
 from email.message import EmailMessage
+import calendar
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -430,19 +431,34 @@ def renew_bhakt(bhakt_id):
     try:
         data = request.get_json(silent=True) or {}
         months = int(data.get('validity_months', 12))
-        bhakt.start_date = datetime.utcnow().date()
-        bhakt.validity_months = months
-        bhakt.calculate_expiration()
+        
+        today = datetime.now(timezone.utc).date()  # ✅ Timezone-aware UTC, then date only
+        
+        # If subscription is still active, extend from expiration date, else start from today
+        base_date = bhakt.expiration_date if bhakt.expiration_date and bhakt.expiration_date > today else today
+
+        # Add months
+        target_year = base_date.year
+        target_month = base_date.month + months
+        while target_month > 12:
+            target_month -= 12
+            target_year += 1
+        
+        max_day = calendar.monthrange(target_year, target_month)[1]
+        target_day = min(base_date.day, max_day)
+
+        bhakt.expiration_date = datetime(target_year, target_month, target_day).date()
+        
+        # Optional: update validity_months for record-keeping
+        bhakt.validity_months = ((bhakt.expiration_date.year - bhakt.start_date.year) * 12 +
+                                 (bhakt.expiration_date.month - bhakt.start_date.month))
+
         db.session.commit()
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'message': 'Bhakt renewed successfully'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-
-    except Exception as e:
-        db.session.rollback()
-        return f"Error renewing bhakt: {e}", 500
-
+    
 
 @app.route('/view/monthly_schedule', methods=['GET'])
 def view_monthly_schedule():

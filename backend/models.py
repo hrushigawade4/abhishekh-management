@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
+import calendar
 
 db = SQLAlchemy()
 
@@ -25,16 +26,32 @@ class Bhakt(db.Model):
         self.abhishek_types = abhishek_types if abhishek_types else ""
         self.start_date = start_date if start_date else datetime.utcnow().date()
         self.validity_months = validity_months
-        self.expiration_date = self.start_date + timedelta(days=validity_months * 30) # Approximate
+        # Calculate expiration when creating the object
+        self.calculate_expiration()
 
     def calculate_expiration(self):
-        # More accurate expiration calculation considering month end
-        import calendar
-        year = self.start_date.year + (self.start_date.month + self.validity_months - 1) // 12
-        month = (self.start_date.month + self.validity_months - 1) % 12 + 1
-        day = min(self.start_date.day, calendar.monthrange(year, month)[1])
-        self.expiration_date = datetime(year, month, day).date()
-
+        """Calculate expiration date based on start_date and validity_months"""
+        if not self.start_date or not self.validity_months:
+            return
+        
+        # Start from the current start_date
+        current_date = self.start_date
+        target_year = current_date.year
+        target_month = current_date.month
+        
+        # Add the validity months
+        target_month += self.validity_months
+        
+        # Handle year overflow
+        while target_month > 12:
+            target_month -= 12
+            target_year += 1
+        
+        # Handle day overflow (e.g., Jan 31 + 1 month should be Feb 28/29)
+        max_day_in_target_month = calendar.monthrange(target_year, target_month)[1]
+        target_day = min(current_date.day, max_day_in_target_month)
+        
+        self.expiration_date = datetime(target_year, target_month, target_day).date()
 
 class SacredDate(db.Model):
     id = db.Column(db.Integer, primary_key=True)

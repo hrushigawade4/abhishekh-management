@@ -548,28 +548,28 @@ const combinedSearch = document.getElementById('combined-search');
     }
 }
 
-    async renewBhakt(id) {
-        const bhakt = this.bhakts.find(b => b.id === id);
-        if (!bhakt) return;
+async renewBhakt(id) {
+    const bhakt = this.bhakts.find(b => b.id === id);
+    if (!bhakt) return;
 
-        const months = prompt('Enter validity months:', '12');
-        if (!months || isNaN(months)) return;
+    const months = prompt('Enter validity months:', '12');
+    if (!months || isNaN(months)) return;
 
-        try {
-            const response = await fetch(`/bhakts/${bhakt.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ validity_months: parseInt(months) })
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Failed to renew bhakt');
-            alert('Bhakt subscription renewed successfully!');
-            await this.loadBhakts();
-            this.updateDashboard();
-        } catch (error) {
-            alert('Error renewing bhakt: ' + error.message);
-        }
+    try {
+        const response = await fetch(`/renew_bhakt/${bhakt.id}`, {  // Changed endpoint
+            method: 'POST',  // Changed to POST
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ validity_months: parseInt(months) })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to renew bhakt');
+        alert('Bhakt subscription renewed successfully!');
+        await this.loadBhakts();
+        this.updateDashboard();
+    } catch (error) {
+        alert('Error renewing bhakt: ' + error.message);
     }
+}
 
    async deleteBhakt(id) {
     if (confirm('Are you sure you want to delete this bhakt?')) {
