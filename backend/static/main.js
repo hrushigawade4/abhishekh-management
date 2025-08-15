@@ -842,29 +842,11 @@ async renewBhakt(id) {
     }
 
     exportHTML() {
-        const month = parseInt(document.getElementById('schedule-month').value);
-        const year = parseInt(document.getElementById('schedule-year').value);
-        const schedule = this.createMonthlySchedule(month, year);
-
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Monthly Schedule - ${month}/${year}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .schedule-day { border-bottom: 1px solid #ccc; padding: 10px 0; }
-                    .schedule-date { font-weight: bold; color: #ff6b35; }
-                    .schedule-event { margin: 5px 0; padding: 8px; background: #f8f9fa; border-left: 4px solid #009ffd; }
-                </style>
-            </head>
-            <body>
-                ${schedule}
-            </body>
-            </html>
-        `;
-
-        this.downloadFile(html, `schedule-${month}-${year}.html`, 'text/html');
+    const month = parseInt(document.getElementById('schedule-month').value);
+    const year = parseInt(document.getElementById('schedule-year').value);
+    const abhishekType = document.getElementById('abhishek-type-filter').value;
+    // Open the backend export route for filtered, tabular HTML
+    window.open(`/export/monthly_schedule_html?month=${month}&year=${year}&abhishek_type=${encodeURIComponent(abhishekType)}`, '_blank');
     }
 
     downloadFile(content, filename, type) {

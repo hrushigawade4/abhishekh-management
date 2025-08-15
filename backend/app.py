@@ -212,22 +212,31 @@ def export_monthly_schedule():
     sacred_dates = SacredDate.query.all()
     filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
 
-    data_to_export = []
-    seen = set()
-    for sd in filtered_dates:
-        for bhakt in bhakts:
-            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
-            key = (bhakt.id, sd.abhishek_type, sd.date)
-            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
-                data_to_export.append({
-                    'Name': bhakt.name,
-                    'Gotra': bhakt.gotra,
-                    'Mobile': bhakt.mobile_number,
-                    'Address': bhakt.address,
-                    'Abhishek Type': sd.abhishek_type,
-                    'Date': sd.date.strftime('%Y-%m-%d')
-                })
-                seen.add(key)
+    # For each bhakt and abhishek type, find the nearest sacred date in this month
+    nearest_dates = {}
+    for bhakt in bhakts:
+        bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
+        for abhishek_type in bhakt_types:
+            # Find all sacred dates for this abhishek_type after or equal to today
+            future_dates = [sd for sd in sacred_dates if sd.abhishek_type == abhishek_type and bhakt.expiration_date >= sd.date and sd.date >= today]
+            if future_dates:
+                # Pick only the single soonest one
+                nearest = min(future_dates, key=lambda d: d.date)
+                # Only include if the nearest date is in the selected month/year
+                if nearest.date.month == month and nearest.date.year == year:
+                    key = (bhakt.id, abhishek_type)
+                    nearest_dates[key] = {
+                        'Name': bhakt.name,
+                        'Gotra': bhakt.gotra,
+                        'Mobile': bhakt.mobile_number,
+                        'Address': bhakt.address,
+                        'Abhishek Type': abhishek_type,
+                        'Date': nearest.date.strftime('%Y-%m-%d'),
+                        'DateObj': nearest.date
+                    }
+    data_to_export = list(nearest_dates.values())
+    for row in data_to_export:
+        row.pop('DateObj', None)
     if not data_to_export:
         return jsonify({'message': 'No data to export'}), 404
     si = StringIO()
@@ -242,33 +251,45 @@ def export_monthly_schedule():
 
 @app.route('/export/monthly_schedule_html', methods=['GET'])
 def export_monthly_schedule_html():
+
     from datetime import datetime
     today = datetime.utcnow().date()
-    month = today.month
-    year = today.year
+    month = int(request.args.get('month', today.month))
+    year = int(request.args.get('year', today.year))
+    abhishek_type = request.args.get('abhishek_type', '').strip()
     bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
     sacred_dates = SacredDate.query.all()
-    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
 
-    data_to_export = []
-    seen = set()
-    for sd in filtered_dates:
-        for bhakt in bhakts:
-            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
-            key = (bhakt.id, sd.abhishek_type, sd.date)
-            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
-                data_to_export.append({
-                    'Name': bhakt.name,
-                    'Gotra': bhakt.gotra,
-                    'Mobile': bhakt.mobile_number,
-                    'Address': bhakt.address,
-                    'Abhishek_Type': sd.abhishek_type,
-                    'Date': sd.date.strftime('%Y-%m-%d')
-                })
-                seen.add(key)
-    rendered = render_template('monthly_schedule_table.html', schedule=data_to_export)
+    nearest_dates = {}
+    output_columns = ['Date', 'Name', 'Gotra', 'Abhishek Type', 'Mobile', 'Address']
+    for bhakt in bhakts:
+        bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
+        # If abhishek_type filter is set, only include matching types
+        types_to_check = [abhishek_type] if abhishek_type else bhakt_types
+        for ab_type in types_to_check:
+            if ab_type not in bhakt_types:
+                continue
+            future_dates = [sd for sd in sacred_dates if sd.abhishek_type == ab_type and bhakt.expiration_date >= sd.date and sd.date >= today]
+            if future_dates:
+                nearest = min(future_dates, key=lambda d: d.date)
+                if nearest.date.month == month and nearest.date.year == year:
+                    key = (bhakt.id, ab_type)
+                    nearest_dates[key] = {
+                        'Date': nearest.date.strftime('%Y-%m-%d'),
+                        'Name': bhakt.name,
+                        'Gotra': bhakt.gotra,
+                        'Abhishek Type': ab_type,
+                        'Mobile': bhakt.mobile_number,
+                        'Address': bhakt.address
+                    }
+    data_to_export = list(nearest_dates.values())
+    filtered_data = [
+        {col: row[col] for col in output_columns}
+        for row in data_to_export
+    ]
+    rendered = render_template('monthly_schedule_table.html', schedule=filtered_data)
     response = make_response(rendered)
-    response.headers['Content-Disposition'] = 'attachment; filename=monthly_abhishek_schedule.html'
+    response.headers['Content-Disposition'] = f'attachment; filename={abhishek_type or "all"}_{month}_{year}_schedule.html'
     response.headers['Content-Type'] = 'text/html'
     return response
 
@@ -470,22 +491,29 @@ def view_monthly_schedule():
     sacred_dates = SacredDate.query.all()
     filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year and sd.date >= today]
 
-    data_to_display = []
-    seen = set()
-    for sd in filtered_dates:
-        for bhakt in bhakts:
-            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
-            key = (bhakt.id, sd.abhishek_type, sd.date)
-            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
-                data_to_display.append({
-                    'Name': bhakt.name,
-                    'Gotra': bhakt.gotra,
-                    'Mobile': bhakt.mobile_number,
-                    'Address': bhakt.address,
-                    'Abhishek_Type': sd.abhishek_type,
-                    'Date': sd.date.strftime('%Y-%m-%d')
-                })
-                seen.add(key)
+    # Use the same filtered, tabular logic as the export
+    output_columns = ['Date', 'Name', 'Gotra', 'Abhishek Type', 'Mobile', 'Address']
+    nearest_dates = {}
+    for bhakt in bhakts:
+        bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
+        for abhishek_type in bhakt_types:
+            # Find all sacred dates for this abhishek_type after or equal to today
+            future_dates = [sd for sd in sacred_dates if sd.abhishek_type == abhishek_type and bhakt.expiration_date >= sd.date and sd.date >= today]
+            if future_dates:
+                # Pick only the single soonest one
+                nearest = min(future_dates, key=lambda d: d.date)
+                # Only include if the nearest date is in the selected month/year
+                if nearest.date.month == month and nearest.date.year == year:
+                    key = (bhakt.id, abhishek_type)
+                    nearest_dates[key] = {
+                        'Date': nearest.date.strftime('%Y-%m-%d'),
+                        'Name': bhakt.name,
+                        'Gotra': bhakt.gotra,
+                        'Abhishek Type': abhishek_type,
+                        'Mobile': bhakt.mobile_number,
+                        'Address': bhakt.address
+                    }
+    data_to_display = list(nearest_dates.values())
     return render_template('monthly_schedule_table.html', schedule=data_to_display)
 
 @app.route('/export/bhakts', methods=['GET'])
@@ -676,34 +704,44 @@ def export_monthly_schedule_filtered():
     sacred_dates = SacredDate.query.filter(
         SacredDate.abhishek_type == abhishek_type
     ).all()
-    filtered_dates = [sd for sd in sacred_dates if sd.date.month == month and sd.date.year == year]
-
-    data_to_export = []
-    seen = set()
-    for sd in filtered_dates:
-        for bhakt in bhakts:
-            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
-            key = (bhakt.id, sd.abhishek_type, sd.date)
-            if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
-                data_to_export.append({
-                    'Date': sd.date.strftime('%Y-%m-%d'),
-                    'Day': sd.date.strftime('%A'),
-                    'Abhishek Type': sd.abhishek_type,
-                    'Name': bhakt.name,
-                    'Gotra': bhakt.gotra,
-                    'Mobile': bhakt.mobile_number,
-                    'Email': bhakt.email_address,
-                    'Address': bhakt.address,
-                    'Validity (Months)': bhakt.validity_months,
-                    'Expiration Date': bhakt.expiration_date.strftime('%Y-%m-%d')
-                })
-                seen.add(key)
+    # Find the single next sacred date after or equal to today for each bhakt (for the selected abhishek_type)
+    nearest_dates = {}
+    for bhakt in bhakts:
+        bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
+        if abhishek_type in bhakt_types:
+            # Find all sacred dates for this abhishek_type after or equal to today
+            future_dates = [sd for sd in sacred_dates if bhakt.expiration_date >= sd.date and sd.date >= today]
+            if future_dates:
+                # Pick only the single soonest one
+                nearest = min(future_dates, key=lambda d: d.date)
+                # Only include if the nearest date is in the selected month/year
+                if nearest.date.month == month and nearest.date.year == year:
+                    key = (bhakt.id, abhishek_type)
+                    nearest_dates[key] = {
+                        'Date': nearest.date.strftime('%Y-%m-%d'),
+                        'Day': nearest.date.strftime('%A'),
+                        'Abhishek Type': abhishek_type,
+                        'Name': bhakt.name,
+                        'Gotra': bhakt.gotra,
+                        'Mobile': bhakt.mobile_number,
+                        'Email': bhakt.email_address,
+                        'Address': bhakt.address,
+                        'Validity (Months)': bhakt.validity_months,
+                        'Expiration Date': bhakt.expiration_date.strftime('%Y-%m-%d')
+                    }
+    data_to_export = list(nearest_dates.values())
     if not data_to_export:
         return jsonify({'message': 'No data to export'}), 404
+    # Only include the requested columns
+    output_columns = ['Date', 'Name', 'Gotra', 'Abhishek Type', 'Mobile', 'Address']
+    filtered_data = [
+        {col: row[col] for col in output_columns}
+        for row in data_to_export
+    ]
     si = StringIO()
-    cw = csv.DictWriter(si, fieldnames=data_to_export[0].keys())
+    cw = csv.DictWriter(si, fieldnames=output_columns)
     cw.writeheader()
-    cw.writerows(data_to_export)
+    cw.writerows(filtered_data)
     output = si.getvalue()
     response = make_response(output)
     response.headers["Content-Disposition"] = f"attachment; filename={abhishek_type}_{month}_{year}_schedule.csv"
