@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bhakt Management System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -127,8 +128,8 @@
                         </div>
                     </div>
                    
-                    <button id="show-expired-bhakts" class="btn btn-outline">Show Bhakts Expired Last Month</button>
-                    <button id="show-expiring-soon-bhakts" class="btn btn-outline">Show Bhakts Expiring Soon</button>
+                    <button id="show-expired-bhakts" class="btn btn-outline">Show Bhakts Seva Expired Last Month</button>
+                    <button id="show-expiring-soon-bhakts" class="btn btn-outline">Show Bhakts Seva Expiring Soon</button>
                      <button id="export-bhakts" class="btn btn-outline">Export Bhakt List</button>
                     <div class="table-container">
                         <table id="bhakts-table" class="data-table">
@@ -205,12 +206,25 @@
         </div>
         <div class="scheduler-controls" style="margin-top:16px;">
             <!-- Other export options -->
+             <label>
+            <input type="checkbox" id="include-mobile" checked>
+            Include Mobile Number
+            </label>
+
+            <label>
+            <input type="checkbox" id="include-address" checked>
+            Include Address
+            </label>
+            <button id="generate-labels-btn" class="btn btn-outline">Generate Labels</button>
             <button id="export-csv" class="btn btn-outline">Export CSV</button>
             <button id="export-html" class="btn btn-outline">Export HTML</button>
             <button id="export-full-schedule" class="btn btn-outline">Export Full Monthly Schedule</button>
+            <button id="export-labels-pdf" class="btn btn-success" style="margin-left:8px;">Download Labels PDF</button>
         </div>
+        
     </div>
     <div id="schedule-content" class="schedule-content"></div>
+    <div id="label-print-container" class="label-print-container" style="margin-top:20px;"></div>
 </div>
 
                 <!-- Combined View Page -->
@@ -276,10 +290,9 @@
         </form>
     </div>
 </div>
-
 <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
  <footer style="font-size:10px; color:#bbb; text-align:center; margin-top:30px; opacity:0.5;">
-       &copy; {{ year }} | Made by Hrushi Sonke & Hrushi Gawade
-    </footer>   
+       &copy; {{ year }} | Made by Hrushi Sonake & Hrushi Gawade
+    </footer>
 </body>
 </html>

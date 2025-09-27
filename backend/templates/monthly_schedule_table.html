@@ -10,27 +10,21 @@
     </style>
 </head>
 <body>
-    <h2>Monthly Abhishek Schedule</h2>
+    <h2>Abhishek Schedule</h2>
     <table>
         <thead>
             <tr>
-                <th>Date</th>
                 <th>Name</th>
                 <th>Gotra</th>
                 <th>Abhishek Type</th>
-                <th>Mobile</th>
-                <th>Address</th>
             </tr>
         </thead>
         <tbody>
             {% for row in schedule %}
             <tr>
-                <td>{{ row['Date'] }}</td>
                 <td>{{ row['Name'] }}</td>
                 <td>{{ row['Gotra'] }}</td>
                 <td>{{ row['Abhishek Type'] }}</td>
-                <td>{{ row['Mobile'] }}</td>
-                <td>{{ row['Address'] }}</td>
             </tr>
             {% endfor %}
         </tbody>

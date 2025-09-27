@@ -10,13 +10,16 @@ import sqlite3
 from datetime import date
 import sys
 import smtplib
+import webbrowser
 from email.message import EmailMessage
 import calendar
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # from models import SacredDate
-
+# ...existing code...
+FIXED_ABHISHEKH_TYPES = ["Guruvar", "Pournima", "Pradosh", "Nityaseva", "Annadan"]
+# ...existing code...
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -261,7 +264,7 @@ def export_monthly_schedule_html():
     sacred_dates = SacredDate.query.all()
 
     nearest_dates = {}
-    output_columns = ['Date', 'Name', 'Gotra', 'Abhishek Type', 'Mobile', 'Address']
+    output_columns = ['Name', 'Gotra', 'Abhishek Type']
     for bhakt in bhakts:
         bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
         # If abhishek_type filter is set, only include matching types
@@ -275,12 +278,11 @@ def export_monthly_schedule_html():
                 if nearest.date.month == month and nearest.date.year == year:
                     key = (bhakt.id, ab_type)
                     nearest_dates[key] = {
-                        'Date': nearest.date.strftime('%Y-%m-%d'),
+                        
                         'Name': bhakt.name,
                         'Gotra': bhakt.gotra,
                         'Abhishek Type': ab_type,
-                        'Mobile': bhakt.mobile_number,
-                        'Address': bhakt.address
+                        
                     }
     data_to_export = list(nearest_dates.values())
     filtered_data = [
@@ -403,18 +405,28 @@ def monthly_scheduler():
 #     conn.close()
 #     return jsonify(types)
 
+'''@app.route('/abhishek_types')
+def get_abhishek_types():
+    return jsonify(FIXED_ABHISHEKH_TYPES)
+'''
+#<!-- COMBINED FIXED AND DB TYPES -->
 @app.route('/abhishek_types')
 def get_abhishek_types():
+    # Get distinct abhishek types from SacredDate table
     types = db.session.query(SacredDate.abhishek_type).distinct().all()
-    unique_types = sorted({t[0] for t in types})
-    return jsonify(unique_types)
+    db_types = {t[0] for t in types if t[0]}  # convert to set, skip None
+    all_types = set(FIXED_ABHISHEKH_TYPES) | db_types  
 
+    
+    return jsonify(sorted(all_types))
 
+#<!-- COMBINED FIXED AND DB TYPES END -->
 @app.route('/edit_bhakt/<int:bhakt_id>', methods=['GET'])
 def edit_bhakt_form(bhakt_id):
     bhakt = Bhakt.query.get_or_404(bhakt_id)
     return render_template('edit_bhakt.html', bhakt=bhakt)
 
+#<--- REDIRECT VIEWS FOR FORM SUBMISSIONS -->
 @app.route('/delete_bhakt/<int:bhakt_id>', methods=['GET'])
 def delete_bhakt_redirect(bhakt_id):
     try:
@@ -425,7 +437,7 @@ def delete_bhakt_redirect(bhakt_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-
+#<---------------------Update Bhakt form submission with redirect------------------------------------>
 @app.route('/update_bhakt/<int:bhakt_id>', methods=['POST'])
 def update_bhakt_form(bhakt_id):
     bhakt = Bhakt.query.get_or_404(bhakt_id)
@@ -445,7 +457,7 @@ def update_bhakt_form(bhakt_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-
+#<-------------------------Renew Bhakt Subscription------------------------------->
 @app.route('/renew_bhakt/<int:bhakt_id>', methods=['POST'])
 def renew_bhakt(bhakt_id):
     bhakt = Bhakt.query.get_or_404(bhakt_id)
@@ -480,7 +492,7 @@ def renew_bhakt(bhakt_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
     
-
+#<---------------------------------View Monthly Schedule--------------------------------->
 @app.route('/view/monthly_schedule', methods=['GET'])
 def view_monthly_schedule():
     from datetime import datetime
@@ -515,7 +527,7 @@ def view_monthly_schedule():
                     }
     data_to_display = list(nearest_dates.values())
     return render_template('monthly_schedule_table.html', schedule=data_to_display)
-
+#<---------------------------------Export Bhakts as CSV--------------------------------->
 @app.route('/export/bhakts', methods=['GET'])
 def export_bhakts():
     bhakts = Bhakt.query.all()
@@ -543,6 +555,8 @@ def export_bhakts():
     response.headers["Content-type"] = "text/csv"
     return response
 
+
+#<---------------------------------API to get Bhakts expired last month--------------------------------->
 @app.route('/bhakts/expired_last_month', methods=['GET'])
 def bhakts_expired_last_month():
     today = datetime.utcnow().date()
@@ -570,7 +584,7 @@ def bhakts_expired_last_month():
             'expiration_date': bhakt.expiration_date.isoformat(),
         })
     return jsonify(output)
-
+#<---------------------------------Export Full Monthly Schedule as CSV--------------------------------->
 @app.route('/export/monthly_schedule_full', methods=['GET'])
 def export_monthly_schedule_full():
     # Get month and year from query params
@@ -588,17 +602,10 @@ def export_monthly_schedule_full():
             bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",")]
             key = (bhakt.id, sd.abhishek_type, sd.date)
             if sd.abhishek_type in bhakt_types and bhakt.expiration_date >= sd.date and key not in seen:
-                data_to_export.append({
-                    'Date': sd.date.strftime('%Y-%m-%d'),
-                    'Day': sd.date.strftime('%A'),
+                data_to_export.append({     
                     'Abhishek Type': sd.abhishek_type,
                     'Name': bhakt.name,
-                    'Gotra': bhakt.gotra,
-                    'Mobile': bhakt.mobile_number,
-                    'Email': bhakt.email_address,
-                    'Address': bhakt.address,
-                    'Validity (Months)': bhakt.validity_months,
-                    'Expiration Date': bhakt.expiration_date.strftime('%Y-%m-%d')
+                    'Gotra': bhakt.gotra,                    
                 })
                 seen.add(key)
     if not data_to_export:
@@ -612,7 +619,7 @@ def export_monthly_schedule_full():
     response.headers["Content-Disposition"] = f"attachment; filename=monthly_schedule_{month}_{year}.csv"
     response.headers["Content-type"] = "text/csv"
     return response
-
+#<---------------------------------API to get Bhakts expiring in next 30 days--------------------------------->
 @app.route('/bhakts/expiring_soon', methods=['GET'])
 def bhakts_expiring_soon():
     today = datetime.utcnow().date()
@@ -637,18 +644,21 @@ def bhakts_expiring_soon():
             'expiration_date': bhakt.expiration_date.isoformat(),
         })
     return jsonify(output)
-
+#<----------------------Label Code------------------------------------------------------------------->
 def check_admin():
     password = request.args.get('admin_password') or request.form.get('admin_password') or request.headers.get('X-Admin-Password')
     if password != ADMIN_PASSWORD:
         abort(403, description="Admin access required.")
 
+#<----------------------Database Backup and Restore------------------------------------------>
 @app.route('/backup_db', methods=['GET'])
 def backup_db():
     check_admin()
     db_path = os.path.join(basedir, 'abhishek_management.db')
     return send_file(db_path, as_attachment=True, download_name='abhishek_management_backup.db')
 
+
+#<----------------------Database Backup and Restore End--------------------------------------->
 @app.route('/restore_db', methods=['POST'])
 def restore_db():
     check_admin()
@@ -658,7 +668,7 @@ def restore_db():
     db_path = os.path.join(basedir, 'abhishek_management.db')
     file.save(db_path)
     return jsonify({'message': 'Database restored successfully'})
-
+#<----------------------Email DB Backup------------------------------------------>
 @app.route('/send_db_backup', methods=['POST'])
 def send_db_backup():
     check_admin()
@@ -692,63 +702,57 @@ def send_db_backup():
         return jsonify({'message': 'Backup sent successfully!'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
+#<----------------------Email DB Backup End------------------------------------------>
 @app.route('/export/monthly_schedule_filtered', methods=['GET'])
 def export_monthly_schedule_filtered():
     month = int(request.args.get('month', datetime.utcnow().month))
     year = int(request.args.get('year', datetime.utcnow().year))
-    abhishek_type = request.args.get('abhishek_type', '')
+    abhishek_type = request.args.get('abhishek_type', '').strip()
     today = datetime.utcnow().date()
+
+    # Get all bhakts whose subscription is still active
     bhakts = Bhakt.query.filter(Bhakt.expiration_date >= today).all()
-    sacred_dates = SacredDate.query.filter(
-        SacredDate.abhishek_type == abhishek_type
-    ).all()
-    # Find the single next sacred date after or equal to today for each bhakt (for the selected abhishek_type)
-    nearest_dates = {}
+
+    data_to_export = []
     for bhakt in bhakts:
         bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
-        if abhishek_type in bhakt_types:
-            # Find all sacred dates for this abhishek_type after or equal to today
-            future_dates = [sd for sd in sacred_dates if bhakt.expiration_date >= sd.date and sd.date >= today]
-            if future_dates:
-                # Pick only the single soonest one
-                nearest = min(future_dates, key=lambda d: d.date)
-                # Only include if the nearest date is in the selected month/year
-                if nearest.date.month == month and nearest.date.year == year:
-                    key = (bhakt.id, abhishek_type)
-                    nearest_dates[key] = {
-                        'Date': nearest.date.strftime('%Y-%m-%d'),
-                        'Day': nearest.date.strftime('%A'),
-                        'Abhishek Type': abhishek_type,
+        # Only include bhakt if abhishek_type matches (or if no filter is given)
+        types_to_export = [abhishek_type] if abhishek_type else bhakt_types
+        for ab_type in types_to_export:
+            if ab_type in bhakt_types:
+                # Check if bhakt is active in the selected month
+                exp_month = bhakt.expiration_date.month
+                exp_year = bhakt.expiration_date.year
+                if (exp_year > year) or (exp_year == year and exp_month >= month):
+                    data_to_export.append({
                         'Name': bhakt.name,
                         'Gotra': bhakt.gotra,
-                        'Mobile': bhakt.mobile_number,
-                        'Email': bhakt.email_address,
-                        'Address': bhakt.address,
-                        'Validity (Months)': bhakt.validity_months,
-                        'Expiration Date': bhakt.expiration_date.strftime('%Y-%m-%d')
-                    }
-    data_to_export = list(nearest_dates.values())
+                        'Abhishek Type': ab_type,
+                        
+                    })
+
     if not data_to_export:
         return jsonify({'message': 'No data to export'}), 404
-    # Only include the requested columns
-    output_columns = ['Date', 'Name', 'Gotra', 'Abhishek Type', 'Mobile', 'Address']
-    filtered_data = [
-        {col: row[col] for col in output_columns}
-        for row in data_to_export
-    ]
+
+    # CSV export
+    fieldnames = ['Name', 'Gotra', 'Abhishek Type']
     si = StringIO()
-    cw = csv.DictWriter(si, fieldnames=output_columns)
+    cw = csv.DictWriter(si, fieldnames=fieldnames)
     cw.writeheader()
-    cw.writerows(filtered_data)
+    cw.writerows(data_to_export)
     output = si.getvalue()
+    
     response = make_response(output)
-    response.headers["Content-Disposition"] = f"attachment; filename={abhishek_type}_{month}_{year}_schedule.csv"
+    response.headers["Content-Disposition"] = f"attachment; filename={abhishek_type or 'all'}_{month}_{year}_schedule.csv"
     response.headers["Content-type"] = "text/csv"
     return response
+#<----------------------Label Code----------------------------------------------------------------------->
+
+
+
 
 if __name__ == '__main__':
+    
     # This runs Flask in development mode.
     # For production, we'll use a production-ready WSGI server like Waitress.
     app.run(debug=True, host='127.0.0.1', port=5000)

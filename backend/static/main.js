@@ -19,6 +19,7 @@ class BhaktManagementSystem {
         this.updateDashboard();
         this.populateYearSelector();
         this.setDefaultDate();
+        this.setupLabelEvents(); // <-- Added here
     }
 
     setupNavigation() {
@@ -89,6 +90,7 @@ class BhaktManagementSystem {
          document.getElementById('export-bhakts').addEventListener('click', () => {
         window.open('/export/bhakts', '_blank');
     });
+    
      document.getElementById('show-expired-bhakts').addEventListener('click', async () => {
         try {
             const response = await fetch('/bhakts/expired_last_month');
@@ -374,8 +376,8 @@ const combinedSearch = document.getElementById('combined-search');
         const totalBhakts = this.bhakts.length;
         const activeSubscriptions = this.bhakts.filter(b => new Date(b.expiration_date) > now).length;
         const sacredDatesCount = this.sacredDates.length;
-        const expiringSoon = this.bhakts.filter(b => {
-            const expDate = new Date(b.expiration_date);
+        const expiringSoon = this.bhakts.filter(bhakt => {
+            const expDate = new Date(bhakt.expiration_date);
             return expDate > now && expDate <= thirtyDaysFromNow;
         }).length;
 
@@ -738,20 +740,20 @@ async renewBhakt(id) {
         }
     }
 
-    populateAbhishekTypeFilter(month, year) {
-    // Get all sacred dates for selected month/year
-    const monthSacredDates = this.sacredDates.filter(date => {
-        const d = new Date(date.date);
-        return d.getMonth() + 1 === month && d.getFullYear() === year;
-    });
-    // Get unique abhishek types
-    const types = [...new Set(monthSacredDates.map(date => date.abhishek_type))];
-    const select = document.getElementById('abhishek-type-filter');
-    if (select) {
-        select.innerHTML = '<option value="">Select Abhishek Type</option>' +
-            types.map(type => `<option value="${type}">${type}</option>`).join('');
-    }
+    populateAbhishekTypeFilter() {
+    // Fetch all Abhishek types from backend
+    fetch('/abhishek_types')
+        .then(res => res.json())
+        .then(types => {
+            const select = document.getElementById('abhishek-type-filter');
+            if (select) {
+                select.innerHTML = '<option value="">Select Abhishek Type</option>' +
+                    types.map(type => `<option value="${type}">${type}</option>`).join('');
+            }
+        })
+        .catch(err => console.error('Error fetching abhishek types:', err));
 }
+
     setDefaultDate() {
         const now = new Date();
         const startDateInput = document.getElementById('start-date');
@@ -761,18 +763,19 @@ async renewBhakt(id) {
     }
 
     generateSchedule() {
-        const month = parseInt(document.getElementById('schedule-month').value);
-        const year = parseInt(document.getElementById('schedule-year').value);
+    const month = parseInt(document.getElementById('schedule-month').value);
+    const year = parseInt(document.getElementById('schedule-year').value);
 
-        const scheduleContent = document.getElementById('schedule-content');
-        scheduleContent.innerHTML = '<div class="loading"><div class="spinner"></div> Generating schedule...</div>';
+    const scheduleContent = document.getElementById('schedule-content');
+    scheduleContent.innerHTML = '<div class="loading"><div class="spinner"></div> Generating schedule...</div>';
 
-        setTimeout(() => {
-            const schedule = this.createMonthlySchedule(month, year);
-            scheduleContent.innerHTML = schedule;
-            this.populateAbhishekTypeFilter(month, year); // <-- Add this line
-        }, 500);
-    }
+    setTimeout(() => {
+        const schedule = this.createMonthlySchedule(month, year);
+        scheduleContent.innerHTML = schedule;
+        this.populateAbhishekTypeFilter(); // <-- now uses all types
+    }, 500);
+}
+
 
     createMonthlySchedule(month, year) {
         const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -818,36 +821,45 @@ async renewBhakt(id) {
 
         return html;
     }
-
+    
     exportCSV() {
-        const month = parseInt(document.getElementById('schedule-month').value);
-        const year = parseInt(document.getElementById('schedule-year').value);
+    const abhishekType = document.getElementById('abhishek-type-filter').value;
 
-        let csv = 'Date,Day,Abhishek Type,Participants\n';
-
-        const monthSacredDates = this.sacredDates.filter(date => {
-            const d = new Date(date.date);
-            return d.getMonth() + 1 === month && d.getFullYear() === year;
-        });
-
-        monthSacredDates.forEach(event => {
-            const participants = this.bhakts.filter(bhakt =>
-                (Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types : bhakt.abhishek_types.split(',')).includes(event.abhishek_type) &&
-                new Date(bhakt.expiration_date) >= new Date(event.date)
-            );
-            csv += `"${this.formatDate(event.date)}","${this.getDayOfWeek(event.date)}","${event.abhishek_type}","${participants.map(p => p.name).join('; ')}"\n`;
-        });
-
-        this.downloadFile(csv, `schedule-${month}-${year}.csv`, 'text/csv');
+    if (!abhishekType) {
+        alert('Please select an Abhishek Type.');
+        return;
     }
+
+    let csv = 'Participants,Abhishek Type\n';
+
+    // Filter all Bhakts who have this Abhishek type
+    const participants = this.bhakts.filter(b => 
+        (Array.isArray(b.abhishek_types) ? b.abhishek_types : b.abhishek_types.split(',')).includes(abhishekType)
+    );
+
+    participants.forEach(bhakt => {
+        csv += `"${bhakt.name}","${abhishekType}"\n`;
+    });
+
+    this.downloadFile(csv, `schedule-${abhishekType}.csv`, 'text/csv');
+}
+
+
 
     exportHTML() {
     const month = parseInt(document.getElementById('schedule-month').value);
     const year = parseInt(document.getElementById('schedule-year').value);
     const abhishekType = document.getElementById('abhishek-type-filter').value;
-    // Open the backend export route for filtered, tabular HTML
-    window.open(`/export/monthly_schedule_html?month=${month}&year=${year}&abhishek_type=${encodeURIComponent(abhishekType)}`, '_blank');
+
+    if (!abhishekType) {
+        alert('Please select an Abhishek Type.');
+        return;
     }
+
+    // Backend route should filter Bhakts by month, year, and Abhishek type
+    window.open(`/export/monthly_schedule_html?month=${month}&year=${year}&abhishek_type=${encodeURIComponent(abhishekType)}`, '_blank');
+}
+
 
     downloadFile(content, filename, type) {
         const blob = new Blob([content], { type });
@@ -895,6 +907,200 @@ async renewBhakt(id) {
         html += '</div>';
         combinedContent.innerHTML = html;
     }
+
+    // Generate labels based on selected Abhishek Type
+   async generateLabels() {
+    const selectedType = document.querySelector('#abhishek-type-filter').value;
+    const includeMobile = document.querySelector('#include-mobile').checked;
+
+    if (!selectedType) {
+        alert('Please select an Abhishek type for labels.');
+        return;
+    }
+
+    const labelsData = this.bhakts.filter(bhakt => 
+        bhakt.abhishek_types.includes(selectedType) &&
+        new Date(bhakt.expiration_date) >= new Date()
+    );
+
+    if (labelsData.length === 0) {
+        alert('No active bhakts found for this type.');
+        return;
+    }
+
+    // Find or create the container on the page
+    let labelContainer = document.getElementById('label-print-container');
+    if (!labelContainer) {
+        labelContainer = document.createElement('div');
+        labelContainer.id = 'label-print-container';
+        labelContainer.style.display = 'flex';
+        labelContainer.style.flexWrap = 'wrap';
+        labelContainer.style.gap = '10px';
+        labelContainer.style.padding = '10px';
+        document.body.appendChild(labelContainer); // or append to a specific div on your page
+    }
+
+    // Clear previous labels
+    labelContainer.innerHTML = '';
+
+    // Generate new labels
+    labelsData.forEach(bhakt => {
+    const labelDiv = document.createElement('div');
+    labelDiv.style.border = '1px solid #000';
+    labelDiv.style.padding = '8px';
+    labelDiv.style.width = '220px';
+    labelDiv.style.minHeight = '90px';
+    labelDiv.style.boxSizing = 'border-box';
+    labelDiv.style.display = 'flex';
+    labelDiv.style.flexDirection = 'column';
+    labelDiv.style.justifyContent = 'center';
+    labelDiv.style.alignItems = 'flex-start';
+    labelDiv.style.fontSize = '13px';
+    labelDiv.style.wordBreak = 'break-word';
+    labelDiv.style.whiteSpace = 'normal';
+    labelDiv.style.margin = '2px';
+
+    // Function to create a row
+    const createRow = (label, value) => {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '4px'; // small space between label and value
+        row.innerHTML = `<strong>${label}:</strong><span>${value || ''}</span>`;
+        return row;
+    };
+
+    labelDiv.appendChild(createRow('Name', bhakt.name));
+    labelDiv.appendChild(createRow('Address', bhakt.address));
+    if (includeMobile) {
+        labelDiv.appendChild(createRow('Mobile', bhakt.mobile_number));
+    }
+
+    labelContainer.appendChild(labelDiv);
+});
+
+
+}
+    // Export labels to PDF
+// Export labels to PDF with dynamic height
+// Export labels to PDF with same logic as generateLabels
+exportLabelsToPDF() {
+    if (!window.jspdf) {
+        alert('jsPDF library is not loaded!');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const abhishekType = document.getElementById('abhishek-type-filter')?.value;
+    const includeMobile = document.getElementById('include-mobile')?.checked;
+
+    if (!abhishekType) {
+        alert('Please select an Abhishek type.');
+        return;
+    }
+
+    const labels = this.bhakts.filter(b => 
+        b.abhishek_types.includes(abhishekType) &&
+        new Date(b.expiration_date) >= new Date()
+    );
+
+    if (labels.length === 0) {
+        alert('No active bhakts found for this type.');
+        return;
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const spacing = 10;
+    const labelWidth = (pageWidth - 2 * margin - spacing) / 2;
+
+    let x = margin;
+    let y = 10;
+
+    for (let i = 0; i < labels.length; i += 2) {
+        let pair = labels.slice(i, i + 2);
+
+        let heights = [];
+        let linesList = [];
+
+        // prepare text for each label in the row
+        pair.forEach(b => {
+            const maxTextWidth = labelWidth - 6;
+            let lines = [];
+
+            lines.push(...doc.splitTextToSize(`Name: ${b.name || 'N/A'}`, maxTextWidth));
+            lines.push(...doc.splitTextToSize(`Address: ${b.address || 'N/A'}`, maxTextWidth));
+
+            // ✅ mobile added only if checkbox is checked
+            if (includeMobile) {
+                lines.push(...doc.splitTextToSize(`Mobile: ${b.mobile_number || b.mobile || 'N/A'}`, maxTextWidth));
+            }
+
+            const lineHeight = 6;
+            const labelHeight = lines.length * lineHeight + 6;
+
+            linesList.push(lines);
+            heights.push(labelHeight);
+        });
+
+        // tallest label height for row alignment
+        const rowHeight = Math.max(...heights);
+
+        // draw each label in the row
+        pair.forEach((b, index) => {
+            const lines = linesList[index];
+            const labelX = index === 0 ? x : x + labelWidth + spacing;
+
+            doc.rect(labelX, y, labelWidth, rowHeight);
+
+            let textY = y + 6;
+            lines.forEach(line => {
+                doc.text(line, labelX + 3, textY);
+                textY += 6;
+            });
+        });
+
+        // move down for next row
+        y += rowHeight + 5;
+
+        // new page if needed
+        if (y + rowHeight > pageHeight - margin) {
+            doc.addPage();
+            y = 10;
+        }
+    }
+
+    doc.save(`labels-${abhishekType}.pdf`);
+    console.log(`PDF downloaded with ${labels.length} labels.`);
+}
+
+
+
+    // Call this in constructor or init
+setupLabelEvents() {
+    const generateBtn = document.getElementById('generate-labels-btn');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', () => this.generateLabels());
+    }
+
+    const exportBtn = document.getElementById('export-labels-pdf');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => this.exportLabelsToPDF());
+    }
+
+    const mobileCheckbox = document.getElementById('print-mobile-checkbox');
+    if (mobileCheckbox) {
+        mobileCheckbox.addEventListener('change', () => this.generateLabels());
+    }
+
+    const addressCheckbox = document.getElementById('print-address-checkbox');
+    if (addressCheckbox) {
+        addressCheckbox.addEventListener('change', () => this.generateLabels());
+    }
+}
+
 
     formatDate(dateStr) {
         return new Date(dateStr).toLocaleDateString('en-IN', {
