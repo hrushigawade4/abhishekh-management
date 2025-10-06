@@ -84,8 +84,8 @@ class BhaktManagementSystem {
         document.getElementById('export-csv').addEventListener('click', () => {
             this.exportCSV();
         });
-        document.getElementById('export-html').addEventListener('click', () => {
-            this.exportHTML();
+        document.getElementById('export-pdf').addEventListener('click', () => {
+            this.exportPDF();
         });
          document.getElementById('export-bhakts').addEventListener('click', () => {
         window.open('/export/bhakts', '_blank');
@@ -846,9 +846,13 @@ async renewBhakt(id) {
 
 
 
-    exportHTML() {
-    const month = parseInt(document.getElementById('schedule-month').value);
-    const year = parseInt(document.getElementById('schedule-year').value);
+exportPDF() {
+    if (!window.jspdf) {
+        alert('jsPDF library is not loaded!');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
     const abhishekType = document.getElementById('abhishek-type-filter').value;
 
     if (!abhishekType) {
@@ -856,9 +860,54 @@ async renewBhakt(id) {
         return;
     }
 
-    // Backend route should filter Bhakts by month, year, and Abhishek type
-    window.open(`/export/monthly_schedule_html?month=${month}&year=${year}&abhishek_type=${encodeURIComponent(abhishekType)}`, '_blank');
+    // Filter bhakts
+    const participants = this.bhakts.filter(b =>
+        (Array.isArray(b.abhishek_types) ? b.abhishek_types : b.abhishek_types.split(',')).includes(abhishekType)
+    );
+
+    // Convert participants into pairs (two bhakts per row)
+    const tableData = [];
+    for (let i = 0; i < participants.length; i += 2) {
+        const b1 = participants[i];
+        const b2 = participants[i + 1] || {}; // in case of odd count
+
+        tableData.push([
+            b1.name || "",
+            b1.gotra || "-",
+            b2.name || "",
+            b2.gotra || "-"
+        ]);
+    }
+
+    // Create PDF
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Heading
+    doc.setFontSize(16);
+    doc.text(`Schedule for ${abhishekType}`, pageWidth / 2, 20, { align: "center" });
+
+    // Table
+    doc.autoTable({
+        startY: 30,
+        head: [['Name', 'Gotra', 'Name', 'Gotra']],
+        body: tableData,
+        theme: 'grid',
+        styles: { halign: 'left', valign: 'middle', fontSize: 11 },
+        headStyles: { fillColor: [22, 160, 133], textColor: 255, halign: 'center' },
+        columnStyles: {
+            0: { cellWidth: 45 },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 45 },
+            3: { cellWidth: 45 }
+        }
+    });
+
+    // Save
+    doc.save(`schedule-${abhishekType}.pdf`);
 }
+
+
 
 
     downloadFile(content, filename, type) {
@@ -909,26 +958,20 @@ async renewBhakt(id) {
     }
 
     // Generate labels based on selected Abhishek Type
-   async generateLabels() {
-    const selectedType = document.querySelector('#abhishek-type-filter').value;
+async generateLabels() {
     const includeMobile = document.querySelector('#include-mobile').checked;
 
-    if (!selectedType) {
-        alert('Please select an Abhishek type for labels.');
-        return;
-    }
-
-    const labelsData = this.bhakts.filter(bhakt => 
-        bhakt.abhishek_types.includes(selectedType) &&
+    // only active bhakts
+    const labelsData = this.bhakts.filter(bhakt =>
         new Date(bhakt.expiration_date) >= new Date()
     );
 
     if (labelsData.length === 0) {
-        alert('No active bhakts found for this type.');
+        alert('No active bhakts found.');
         return;
     }
 
-    // Find or create the container on the page
+    // container
     let labelContainer = document.getElementById('label-print-container');
     if (!labelContainer) {
         labelContainer = document.createElement('div');
@@ -937,144 +980,134 @@ async renewBhakt(id) {
         labelContainer.style.flexWrap = 'wrap';
         labelContainer.style.gap = '10px';
         labelContainer.style.padding = '10px';
-        document.body.appendChild(labelContainer); // or append to a specific div on your page
+        document.body.appendChild(labelContainer);
     }
 
-    // Clear previous labels
+    // clear old
     labelContainer.innerHTML = '';
 
-    // Generate new labels
+    // create label
     labelsData.forEach(bhakt => {
-    const labelDiv = document.createElement('div');
-    labelDiv.style.border = '1px solid #000';
-    labelDiv.style.padding = '8px';
-    labelDiv.style.width = '220px';
-    labelDiv.style.minHeight = '90px';
-    labelDiv.style.boxSizing = 'border-box';
-    labelDiv.style.display = 'flex';
-    labelDiv.style.flexDirection = 'column';
-    labelDiv.style.justifyContent = 'center';
-    labelDiv.style.alignItems = 'flex-start';
-    labelDiv.style.fontSize = '13px';
-    labelDiv.style.wordBreak = 'break-word';
-    labelDiv.style.whiteSpace = 'normal';
-    labelDiv.style.margin = '2px';
+        const labelDiv = document.createElement('div');
+        labelDiv.style.border = '1px solid #000';
+        labelDiv.style.padding = '8px';
+        labelDiv.style.width = '220px';
+        labelDiv.style.minHeight = '90px';
+        labelDiv.style.boxSizing = 'border-box';
+        labelDiv.style.display = 'flex';
+        labelDiv.style.flexDirection = 'column';
+        labelDiv.style.justifyContent = 'center';
+        labelDiv.style.alignItems = 'flex-start';
+        labelDiv.style.fontSize = '13px';
+        labelDiv.style.margin = '2px';
 
-    // Function to create a row
-    const createRow = (label, value) => {
-        const row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.gap = '4px'; // small space between label and value
-        row.innerHTML = `<strong>${label}:</strong><span>${value || ''}</span>`;
-        return row;
-    };
+        const createRow = (label, value) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '4px';
+            row.innerHTML = `<strong>${label}:</strong><span>${value || ''}</span>`;
+            return row;
+        };
 
-    labelDiv.appendChild(createRow('Name', bhakt.name));
-    labelDiv.appendChild(createRow('Address', bhakt.address));
-    if (includeMobile) {
-        labelDiv.appendChild(createRow('Mobile', bhakt.mobile_number));
-    }
+        labelDiv.appendChild(createRow('Name', bhakt.name));
+        labelDiv.appendChild(createRow('Address', bhakt.address));
+        if (includeMobile) {
+            labelDiv.appendChild(createRow('Mobile', bhakt.mobile_number));
+        }
 
-    labelContainer.appendChild(labelDiv);
-});
-
-
+        labelContainer.appendChild(labelDiv);
+    });
 }
+
     // Export labels to PDF
 // Export labels to PDF with dynamic height
 // Export labels to PDF with same logic as generateLabels
 exportLabelsToPDF() {
-    if (!window.jspdf) {
-        alert('jsPDF library is not loaded!');
-        return;
+  if (!window.jspdf) {
+    alert('jsPDF library is not loaded!');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const includeMobile = !!document.getElementById('include-mobile')?.checked;
+
+  // Only active bhakts
+  const labels = this.bhakts.filter(b => new Date(b.expiration_date) >= new Date());
+  if (!labels.length) { alert('No active bhakts found.'); return; }
+
+  // --- Label size ---
+  const labelW = 100;
+  const labelH = 44;
+  const cols = 2;
+  const rows = 6;
+
+  // Margins to center labels on A4
+  const pageW = 210, pageH = 297;
+  const leftMargin = (pageW - cols * labelW) / 2;
+  const topMargin = (pageH - rows * labelH) / 2;
+
+  // --- Text formatting ---
+  const paddingX = 4;
+  const paddingY = 6;
+  const baseFontSize = 11;
+  let lineHeight = baseFontSize * 0.3528 * 1.2; // pt → mm
+
+  labels.forEach((b, i) => {
+    if (i > 0 && i % (cols * rows) === 0) doc.addPage();
+
+    const rel = i % (cols * rows);
+    const col = rel % cols;
+    const row = Math.floor(rel / cols);
+
+    const x = leftMargin + col * labelW;
+    const y = topMargin + row * labelH;
+
+    // Prepare text lines
+    const maxTextW = labelW - paddingX * 2;
+    let lines = [];
+    lines.push(...doc.splitTextToSize(`Name: ${b.name || ''}`, maxTextW));
+    lines.push(...doc.splitTextToSize(`Address: ${b.address || ''}`, maxTextW));
+    if (includeMobile) {
+      lines.push(...doc.splitTextToSize(`Mobile: ${b.mobile_number || ''}`, maxTextW));
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // Adjust font size if text too tall
+   let fontSize = baseFontSize;
+doc.setFontSize(fontSize);  // Reset font size at start of label
+lineHeight = fontSize * 0.3528 * 1.2;
 
-    const abhishekType = document.getElementById('abhishek-type-filter')?.value;
-    const includeMobile = document.getElementById('include-mobile')?.checked;
-
-    if (!abhishekType) {
-        alert('Please select an Abhishek type.');
-        return;
-    }
-
-    const labels = this.bhakts.filter(b => 
-        b.abhishek_types.includes(abhishekType) &&
-        new Date(b.expiration_date) >= new Date()
-    );
-
-    if (labels.length === 0) {
-        alert('No active bhakts found for this type.');
-        return;
-    }
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 10;
-    const spacing = 10;
-    const labelWidth = (pageWidth - 2 * margin - spacing) / 2;
-
-    let x = margin;
-    let y = 10;
-
-    for (let i = 0; i < labels.length; i += 2) {
-        let pair = labels.slice(i, i + 2);
-
-        let heights = [];
-        let linesList = [];
-
-        // prepare text for each label in the row
-        pair.forEach(b => {
-            const maxTextWidth = labelWidth - 6;
-            let lines = [];
-
-            lines.push(...doc.splitTextToSize(`Name: ${b.name || 'N/A'}`, maxTextWidth));
-            lines.push(...doc.splitTextToSize(`Address: ${b.address || 'N/A'}`, maxTextWidth));
-
-            // ✅ mobile added only if checkbox is checked
-            if (includeMobile) {
-                lines.push(...doc.splitTextToSize(`Mobile: ${b.mobile_number || b.mobile || 'N/A'}`, maxTextWidth));
-            }
-
-            const lineHeight = 6;
-            const labelHeight = lines.length * lineHeight + 6;
-
-            linesList.push(lines);
-            heights.push(labelHeight);
-        });
-
-        // tallest label height for row alignment
-        const rowHeight = Math.max(...heights);
-
-        // draw each label in the row
-        pair.forEach((b, index) => {
-            const lines = linesList[index];
-            const labelX = index === 0 ? x : x + labelWidth + spacing;
-
-            doc.rect(labelX, y, labelWidth, rowHeight);
-
-            let textY = y + 6;
-            lines.forEach(line => {
-                doc.text(line, labelX + 3, textY);
-                textY += 6;
-            });
-        });
-
-        // move down for next row
-        y += rowHeight + 5;
-
-        // new page if needed
-        if (y + rowHeight > pageHeight - margin) {
-            doc.addPage();
-            y = 10;
-        }
-    }
-
-    doc.save(`labels-${abhishekType}.pdf`);
-    console.log(`PDF downloaded with ${labels.length} labels.`);
+// Adjust font size if text too tall
+while (lines.length * lineHeight > labelH - paddingY * 2 && fontSize > 6) {
+  fontSize -= 0.5;
+  doc.setFontSize(fontSize); // Update font for this label
+  lineHeight = fontSize * 0.3528 * 1.2;
+  lines = [];
+  lines.push(...doc.splitTextToSize(`Name: ${b.name || ''}`, maxTextW));
+  lines.push(...doc.splitTextToSize(`Address: ${b.address || ''}`, maxTextW));
+  if (includeMobile) lines.push(...doc.splitTextToSize(`Mobile: ${b.mobile_number || ''}`, maxTextW));
 }
+
+
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.25);
+    doc.rect(x, y, labelW, labelH);
+
+    // Print lines
+    let textX = x + paddingX;
+    let textY = y + paddingY + fontSize * 0.3528;
+    lines.forEach(line => {
+      doc.text(line, textX, textY);
+      textY += lineHeight;
+    });
+  });
+
+  doc.save("labels-100x44.pdf");
+}
+
+
+
 
 
 
