@@ -54,6 +54,113 @@ body {
     margin: 0 auto;
     padding: 0 20px;
 }
+/*New Header Responsive*/
+/* Header Base */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  box-shadow: var(--shadow);
+}
+
+.header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* Desktop Nav */
+.nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.nav-btn:hover {
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+/* Mobile Toggle */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.menu-toggle div {
+  width: 25px;
+  height: 3px;
+  background: #333;
+  border-radius: 2px;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: flex;
+  }
+
+  .nav {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 260px;
+    height: 100%;
+    background: var(--surface);
+    flex-direction: column;
+    gap: 10px;
+    padding: 70px 20px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: left 0.3s ease;
+    z-index: 2500;
+  }
+
+  .nav.active {
+    left: 0;
+  }
+
+  .nav-btn {
+    width: 100%;
+    text-align: left;
+    font-size: 1.1rem;
+  }
+
+  body.menu-open::before {
+    content: '';
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 2000;
+  }
+}
+
 
 /* Header */
 .header {
@@ -666,4 +773,37 @@ body {
 }
 .show-mobile-checkbox:hover {
     background: #e9f3ff;
+}
+/*----Manage Bhakt page responsive----*/
+/* Make table scrollable on small screens */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* Stack buttons on mobile */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .search-box {
+        margin-left: 0;
+        margin-top: 10px;
+    }
+
+    .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .data-table th, .data-table td {
+        font-size: 13px;
+        padding: 6px;
+    }
 }

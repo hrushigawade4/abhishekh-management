@@ -6,26 +6,36 @@
     <title>Bhakt Management System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div id="app">
-        <header class="header">
-            <div class="container">
-                <h1 class="logo">|| श्री स्वामी समर्थ ||</h1>
-                <nav class="nav">
-                    <button class="nav-btn active" data-page="dashboard">Dashboard</button>
-                    <button class="nav-btn" data-page="register">Register Bhakt</button>
-                    <button class="nav-btn" data-page="bhakts">Manage Bhakts</button>
-                    <button class="nav-btn" data-page="sacred-dates">Sacred Dates</button>
-                    <button class="nav-btn" data-page="scheduler">Monthly Scheduler</button>
-                    <button class="nav-btn" data-page="combined">Combined View</button>
-                    <!-- Add this button to your navbar inside <nav class="nav"> -->
-<button class="nav-btn" data-page="settings">Settings</button>
-                </nav>
-            </div>
-        </header>
+    <header class="header">
+  <div class="container">
+    <h1 class="logo">|| श्री स्वामी समर्थ ||</h1>
+
+    <!-- Menu Toggle for Mobile -->
+    <div class="menu-toggle" id="menu-toggle">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+      <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+      <button class="nav-btn" data-page="register">Register Bhakt</button>
+      <button class="nav-btn" data-page="bhakts">Manage Bhakts</button>
+      <button class="nav-btn" data-page="sacred-dates">Sacred Dates</button>
+      <button class="nav-btn" data-page="scheduler">Monthly Scheduler</button>
+      <button class="nav-btn" data-page="combined">Combined View</button>
+      <button class="nav-btn" data-page="settings">Settings</button>
+    </nav>
+  </div>
+</header>
 
         <main class="main">
             <div class="container">
@@ -198,7 +208,7 @@
             <button id="generate-schedule" class="btn btn-secondary" style="margin-left:8px;">Generate</button>
         </div>
         <div class="scheduler-controls" style="margin-top:16px;">
-            <!-- Step 2: Select Abhishek Type and export filtered CSV -->
+            <!-- Step 2: Select Abhishek Type and exporheat filtered CSV -->
             <label for="abhishek-type-filter" style="margin-right:8px;">Abhishek Type:</label>
             <select id="abhishek-type-filter">
                 <option value="">Select Abhishek Type</option>
@@ -296,5 +306,31 @@
  <footer style="font-size:10px; color:#bbb; text-align:center; margin-top:30px; opacity:0.5;">
        &copy; {{ year }} | Made by Hrushi Sonake & Hrushi Gawade
     </footer>
+<!--Header Script-->
+<script>
+  const menuToggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('nav');
+
+  // Open/close menu on toggle click
+  menuToggle.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent body click from immediately closing
+    nav.classList.toggle('active');
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!nav.contains(e.target) && !menuToggle.contains(e.target)) {
+      nav.classList.remove('active');
+    }
+  });
+
+  // Close menu when clicking on any link inside it
+  nav.querySelectorAll('button, a').forEach((item) => {
+    item.addEventListener('click', () => {
+      nav.classList.remove('active');
+    });
+  });
+</script>
+
 </body>
 </html>
