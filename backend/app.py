@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, redirect,  url_for, 
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta,timezone
 import os
-from models import db, Bhakt, SacredDate # Import models from models.py
+from models import db, Bhakt, SacredDate, Subscriber # Import models from models.py
 import csv
 from io import StringIO
 from flask import make_response
@@ -13,6 +13,15 @@ import smtplib
 import webbrowser
 from email.message import EmailMessage
 import calendar
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask import Flask, request, jsonify, render_template, redirect, url_for, send_file, flash
+from models import User  # Import User model
+from flask import Flask, render_template, request, redirect, url_for, flash
+from werkzeug.security import generate_password_hash
+from models import User,db, Bhakt, SacredDate, Subscriber
+from flask_migrate import Migrate
+
+
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -22,11 +31,51 @@ FIXED_ABHISHEKH_TYPES = ["Guruvar", "Pournima", "Pradosh", "Nityaseva", "Annadan
 # ...existing code...
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'Admini123'  # Change this to a secure secret key
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'abhishek_management.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 db.init_app(app)
+migrate = Migrate(app, db)
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # try to find existing user
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('index'))
+
+        # Optionally create initial admin if using known initial password
+        if username == 'admin' and password == os.environ.get('INITIAL_ADMIN_PASSWORD', 'Admini123'):
+            user = User(username=username)
+            user.set_password(password)   # <-- set hashed password
+            db.session.add(user)
+            db.session.commit()
+            login_user(user)
+            return redirect(url_for('index'))
+
+        flash('Invalid username or password')
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 # --- FIX FOR before_first_request ---
 # Replace @app.before_first_request with @app.before_request
@@ -39,6 +88,7 @@ def create_tables():
 
 # --- New Routes for Frontend Rendering ---
 @app.route('/')
+@login_required
 def index():
     """Renders the main index.html page."""
     return render_template('index.html',year=datetime.now().year)
@@ -56,7 +106,7 @@ def serve_page_partial(page_name):
         print(f"Error loading page '{page_name}.html': {e}")
         return f"Error loading page: {e}", 404
 
-# --- Existing Routes for Bhakt Management ---
+# --- Existing Routes for Bhakt Management  & register new bhkta --->
 @app.route('/bhakts', methods=['POST'])
 def add_bhakt():
     data = request.get_json()
@@ -70,19 +120,21 @@ def add_bhakt():
         return jsonify({'error': 'Mobile number already exists'}), 400
 
     try:
-        abhishek_types = ','.join(data['abhishek_types']) if isinstance(data['abhishek_types'], list) else data['abhishek_type']
+        # Ensure registration_number is stored as string
+        registration_number = str(data['registration_number']).zfill(2)  # This will pad single digits with leading zeros
+        abhishek_types = ','.join(data['abhishek_types']) if isinstance(data['abhishek_types'], list) else data['abhishek_types']
 
         new_bhakt = Bhakt(
+            registration_number=data['registration_number'],  # Store as string with leading zeros
             name=data['name'],
             mobile_number=data['mobile_number'],
             address=data['address'],
             gotra=data.get('gotra', ''),
             email_address=data.get('email_address', ''),
-            abhishek_types=abhishek_types,  # ✅ FIXED
-            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d'),
-            validity_months=int(data.get('validity_months', 12))
+            abhishek_types=abhishek_types,
+            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
+            validity_months=int(data.get('validity_months', 12)),
         )
-
 
         db.session.add(new_bhakt)
         db.session.commit()
@@ -90,6 +142,7 @@ def add_bhakt():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
 
 
 
@@ -109,6 +162,7 @@ def get_bhakts():
             'start_date': bhakt.start_date.isoformat(),
             'validity_months': bhakt.validity_months,
             'expiration_date': bhakt.expiration_date.isoformat(),
+            "registration_number": bhakt.registration_number,
             'is_active': bhakt.expiration_date >= datetime.utcnow().date()
         })
     return jsonify(output)
@@ -322,9 +376,11 @@ def combined_view():
             ):
                 result.append({
                     "date": sd.date.strftime("%Y-%m-%d"),
+
                     "name": bhakt.name,
                     "gotra": bhakt.gotra,
                     "mobile": bhakt.mobile_number,
+                    "registration_number": bhakt.registration_number,
                     "address": bhakt.address,
                     "type": sd.abhishek_type.strip()
                 })
@@ -333,25 +389,28 @@ def combined_view():
 
     return render_template("combined_view.html", abhishek_data=result, abhishek_types=abhishek_types)
 
-
 @app.route("/api/combined_data")
 def api_combined_data():
     bhakts = Bhakt.query.all()
-    sacred_dates = SacredDate.query.all()
     result = []
-    for sd in sacred_dates:
-        for bhakt in bhakts:
-            bhakt_types = [t.strip() for t in bhakt.abhishek_types.split(",") if t.strip()]
-            if sd.abhishek_type.strip() in bhakt_types:
-                result.append({
-                    "date": sd.date.strftime("%Y-%m-%d"),
-                    "name": bhakt.name,
-                    "gotra": bhakt.gotra,
-                    "mobile": bhakt.mobile_number,
-                    "address": bhakt.address,
-                    "type": sd.abhishek_type.strip()
-                })
+
+    for b in bhakts:
+        result.append({
+            "id": b.id,
+            "registration_number": b.registration_number,  # <-- use the DB value as-is
+            "name": b.name,
+            "mobile_number": b.mobile_number,
+            "address": b.address,
+            "gotra": b.gotra,
+            "email_address": b.email_address,
+            "abhishek_types": b.abhishek_types,
+            "start_date": b.start_date.strftime("%Y-%m-%d") if b.start_date else None,
+            "expiration_date": b.expiration_date.strftime("%Y-%m-%d") if b.expiration_date else None,
+            "validity_months": b.validity_months
+        })
+    
     return jsonify(result)
+
 
 @app.route('/debug_sacred_dates')
 def debug_sacred_dates():
@@ -748,11 +807,141 @@ def export_monthly_schedule_filtered():
     return response
 #<----------------------Label Code----------------------------------------------------------------------->
 
+@app.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    current = (request.form.get('current_password') or '').strip()
+    new = (request.form.get('new_password') or '').strip()
+    confirm = (request.form.get('confirm_password') or '').strip()
 
+    if not current or not new or not confirm:
+        flash('All fields are required.', 'error')
+        return redirect(url_for('index'))
 
+    if new != confirm:
+        flash('New password and confirmation do not match.', 'error')
+        return redirect(url_for('index'))
+
+    # Reload the user from DB to avoid stale session object
+    user = User.query.get(int(current_user.get_id()))
+    if not user or not user.check_password(current):
+        flash('Current password is incorrect.', 'error')
+        return redirect(url_for('index'))
+
+    user.set_password(new)
+    db.session.commit()
+
+    flash('Password changed successfully. Please login again.', 'success')
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/update_special_date', methods=['POST'])
+@login_required
+def update_special_date():
+    data = request.get_json()
+    subscriber_id = data.get('subscriber_id')
+    selected_date = datetime.strptime(data.get('selected_date'), '%Y-%m-%d').date()
+
+    # Check if date is already taken by another subscriber
+    existing_subscriber = Subscriber.query.filter_by(special_date_selected=selected_date).first()
+    if existing_subscriber and existing_subscriber.id != subscriber_id:
+        return jsonify({'error': 'This date is already booked by another subscriber'}), 400
+
+    subscriber = Subscriber.query.get(subscriber_id)
+    if subscriber:
+        subscriber.special_date = True
+        subscriber.special_date_selected = selected_date
+        db.session.commit()
+        return jsonify({'message': 'Special date updated successfully'}), 200
+    return jsonify({'error': 'Subscriber not found'}), 404
+
+@app.route('/register', methods=['POST'])
+@login_required
+def register_subscriber():
+    data = request.get_json()
+    
+    # Basic subscriber details
+    name = data.get('name')
+    mobile = data.get('mobile')
+    address = data.get('address')
+    wants_special_date = data.get('special_date', False)
+    special_date_selected = None
+
+    if wants_special_date:
+        special_date = data.get('special_date_selected')
+        if special_date:
+            special_date_selected = datetime.strptime(special_date, '%Y-%m-%d').date()
+            
+            # Check if date is already taken
+            existing = Subscriber.query.filter_by(special_date_selected=special_date_selected).first()
+            if existing:
+                return jsonify({
+                    'error': 'This special date is already taken by another subscriber'
+                }), 400
+
+    new_subscriber = Subscriber(
+        name=name,
+        mobile=mobile,
+        address=address,
+        special_date=wants_special_date,
+        special_date_selected=special_date_selected
+    )
+
+    try:
+        db.session.add(new_subscriber)
+        db.session.commit()
+        return jsonify({'message': 'Subscriber registered successfully'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+@app.route('/reset-password/<username>', methods=['GET', 'POST'])
+def reset_password(username):
+    user = User.query.filter_by(username=username).first()
+
+    if not user:
+        flash('Invalid user.')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+
+        if new_password != confirm_password:
+            flash('Passwords do not match.')
+            return redirect(url_for('reset_password', username=username))
+
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        flash('Password reset successfully. Please login.')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', username=username)
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        username = request.form['username']
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            flash('No user found with that username.')
+            return redirect(url_for('forgot_password'))
+
+        # For now: simple approach — redirect to reset form
+        return redirect(url_for('reset_password', username=username))
+
+    return render_template('forgot_password.html')
+
+def upgrade_data():
+    with app.app_context():
+        bhakts = Bhakt.query.all()
+        for bhakt in bhakts:
+            bhakt.registration_number = str(bhakt.registration_number).zfill(2)
+        db.session.commit()
 
 if __name__ == '__main__':
     
     # This runs Flask in development mode.
     # For production, we'll use a production-ready WSGI server like Waitress.
     app.run(debug=True, host='127.0.0.1', port=5000)
+

@@ -179,12 +179,8 @@ class BhaktManagementSystem {
     }
 });
 
-    document.getElementById('export-full-schedule').addEventListener('click', () => {
-    const month = document.getElementById('schedule-month').value;
-    const year = document.getElementById('schedule-year').value;
-    window.open(`/export/monthly_schedule_full?month=${month}&year=${year}`, '_blank');
-});
-
+    
+  
 document.getElementById('backup-db').addEventListener('click', () => {
     const adminPassword = prompt('Enter admin password for backup:');
     if (!adminPassword) return;
@@ -225,11 +221,21 @@ const combinedSearch = document.getElementById('combined-search');
 
 }
 
+   // ...existing code...
     async loadBhakts() {
+        this.loadCombinedView();
         try {
             const response = await fetch('/bhakts');
             if (!response.ok) throw new Error('Failed to fetch bhakts');
-            this.bhakts = await response.json();
+            const data = await response.json();
+
+            // Normalize registration_number (use common alternative keys or id as fallback)
+            this.bhakts = (Array.isArray(data) ? data : (data.bhakts || []))
+    .map(b => ({
+        ...b,
+        registration_number: b.registration_number || b.registration_no || b.registration || b.reg_no || b.regNumber || ''
+    }));
+
             const tbody = document.getElementById('bhakts-tbody');
             if (tbody) {
                 tbody.innerHTML = this.bhakts.map(bhakt => this.createBhaktRow(bhakt)).join('');
@@ -238,6 +244,7 @@ const combinedSearch = document.getElementById('combined-search');
             alert('Error loading bhakts: ' + error.message);
         }
     }
+// ...existing code...
 
     async loadSacredDates() {
         try {
@@ -297,6 +304,7 @@ const combinedSearch = document.getElementById('combined-search');
             }
 
             const payload = {
+                registration_number: formData.get('registration_number'),
                 name: formData.get('name'),
                 mobile_number: formData.get('mobile'),
                 email_address: formData.get('email'),
@@ -444,6 +452,7 @@ const combinedSearch = document.getElementById('combined-search');
             bhakt.name.toLowerCase().includes(query.toLowerCase()) ||
             (bhakt.mobile_number || bhakt.mobile).includes(query) ||
             (bhakt.email_address || bhakt.email || '').toLowerCase().includes(query.toLowerCase())
+            (bhakt.registration_number || '').toLowerCase().includes(query)
         );
         const tbody = document.getElementById('bhakts-tbody');
         if (tbody) {
@@ -703,11 +712,13 @@ async renewBhakt(id) {
             (bhakt.gotra || '').toLowerCase().includes(query) ||
             (bhakt.address || '').toLowerCase().includes(query) ||
             (Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types.join(', ') : bhakt.abhishek_types).toLowerCase().includes(query) ||
-            relevantDates.some(date => date.abhishek_type.toLowerCase().includes(query));
+            relevantDates.some(date => date.abhishek_type.toLowerCase().includes(query))||
+            (bhakt.registration_number || '').toLowerCase().includes(query);
         if (!match && query) return;
 
         html += `
             <div class="bhakt-section" style="margin-bottom: 2rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius);">
+                <p><strong>Registration No:</strong> ${bhakt.registration_number}</p>
                 <h4>${bhakt.name} (${bhakt.mobile_number || bhakt.mobile})</h4>
                 <p><strong>Subscribed to:</strong> ${Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types.join(', ') : bhakt.abhishek_types}</p>
                 <p><strong>Valid until:</strong> ${this.formatDate(bhakt.expiration_date)}</p>
@@ -845,7 +856,7 @@ async renewBhakt(id) {
 }
 
 
-
+// Replace your existing exportPDF() method with this:
 exportPDF() {
     if (!window.jspdf) {
         alert('jsPDF library is not loaded!');
@@ -853,63 +864,71 @@ exportPDF() {
     }
 
     const { jsPDF } = window.jspdf;
-    const abhishekType = document.getElementById('abhishek-type-filter').value;
 
+    const abhishekType = document.getElementById('abhishek-type-filter').value;
     if (!abhishekType) {
         alert('Please select an Abhishek Type.');
         return;
     }
 
-    // Filter bhakts
+    // Filter bhakts who match this abhishek type
     const participants = this.bhakts.filter(b =>
-        (Array.isArray(b.abhishek_types) ? b.abhishek_types : b.abhishek_types.split(',')).includes(abhishekType)
+        (Array.isArray(b.abhishek_types) ? b.abhishek_types : (b.abhishek_types || '').toString().split(',')).includes(abhishekType)
     );
 
-    // Convert participants into pairs (two bhakts per row)
-    const tableData = [];
-    for (let i = 0; i < participants.length; i += 2) {
-        const b1 = participants[i];
-        const b2 = participants[i + 1] || {}; // in case of odd count
-
-        tableData.push([
-            b1.name || "",
-            b1.gotra || "-",
-            b2.name || "",
-            b2.gotra || "-"
-        ]);
+    if (participants.length === 0) {
+        alert('No participants found for this Abhishek Type.');
+        return;
     }
 
-    // Create PDF
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Heading
+    const margin = 15;
+    const colWidth = (pageWidth - margin * 2) / 2;
+    const rowHeight = 10;
+
+    // Title
     doc.setFontSize(16);
-    doc.text(`Schedule for ${abhishekType}`, pageWidth / 2, 20, { align: "center" });
+    doc.text(`Schedule for ${abhishekType}`, pageWidth / 2, 20, { align: 'center' });
 
-    // Table
-    doc.autoTable({
-        startY: 30,
-        head: [['Name', 'Gotra', 'Name', 'Gotra']],
-        body: tableData,
-        theme: 'grid',
-        styles: { halign: 'left', valign: 'middle', fontSize: 11 },
-        headStyles: { fillColor: [22, 160, 133], textColor: 255, halign: 'center' },
-        columnStyles: {
-            0: { cellWidth: 45 },
-            1: { cellWidth: 45 },
-            2: { cellWidth: 45 },
-            3: { cellWidth: 45 }
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+
+    let y = 30;
+
+    for (let i = 0; i < participants.length; i += 2) {
+        if (y + rowHeight > pageHeight - 15) {
+            doc.addPage();
+            y = 25;
+
+            // Repeat title on each new page
+            doc.setFontSize(14);
+            doc.text(`Schedule for ${abhishekType}`, pageWidth / 2, 20, { align: 'center' });
+            doc.setFontSize(11);
         }
-    });
 
-    // Save
+        const left = participants[i];
+        const right = participants[i + 1];
+
+        const leftText = `${left.name || ''} (${left.gotra || '-'})`;
+        const rightText = right ? `${right.name || ''} (${right.gotra || '-'})` : '';
+
+        // Left column cell
+        doc.rect(margin, y, colWidth, rowHeight);
+        doc.text(leftText, margin + 3, y + 7);
+
+        // Right column cell
+        doc.rect(margin + colWidth, y, colWidth, rowHeight);
+        if (rightText) doc.text(rightText, margin + colWidth + 3, y + 7);
+
+        y += rowHeight;
+    }
+
     doc.save(`schedule-${abhishekType}.pdf`);
 }
-
-
-
-
+    
     downloadFile(content, filename, type) {
         const blob = new Blob([content], { type });
         const url = URL.createObjectURL(blob);
@@ -921,41 +940,40 @@ exportPDF() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
+loadCombinedView() {
+    const combinedContent = document.getElementById('combined-content');
+    let html = '<div class="combined-section">';
+    html += '<h3>Active Bhakts</h3>';
 
-    loadCombinedView() {
-        const combinedContent = document.getElementById('combined-content');
-        let html = '<div class="combined-section">';
-        html += '<h3>Active Bhakts and Their Sacred Dates</h3>';
+    const activeBhakts = this.bhakts.filter(bhakt =>
+        new Date(bhakt.expiration_date) > new Date()
+    );
 
-        const activeBhakts = this.bhakts.filter(bhakt =>
-            new Date(bhakt.expiration_date) > new Date()
-        );
+    activeBhakts.forEach(bhakt => {
+        html += `
+            <div class="bhakt-section" style="
+                margin-bottom: 1.5rem;
+                padding: 1rem;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--card-bg, #fff);
+            ">
+                <p><strong>Registration No:</strong> ${bhakt.registration_number}</p>
+                <p><strong>Name:</strong> ${bhakt.name}</p>
+                <p><strong>Mobile:</strong> ${bhakt.mobile_number || bhakt.mobile || 'N/A'}</p>
+                <p><strong>Subscribed Abhishek Type(s):</strong> ${
+                    Array.isArray(bhakt.abhishek_types)
+                        ? bhakt.abhishek_types.join(', ')
+                        : bhakt.abhishek_types
+                }</p>
+                <p><strong>Valid Until:</strong> ${this.formatDate(bhakt.expiration_date)}</p>
+            </div>
+        `;
+    });
 
-        activeBhakts.forEach(bhakt => {
-            const relevantDates = this.sacredDates.filter(date =>
-                (Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types : bhakt.abhishek_types.split(',')).includes(date.abhishek_type)
-            );
-            html += `
-                <div class="bhakt-section" style="margin-bottom: 2rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius);">
-                    <h4>${bhakt.name} (${bhakt.mobile_number || bhakt.mobile})</h4>
-                    <p><strong>Subscribed to:</strong> ${Array.isArray(bhakt.abhishek_types) ? bhakt.abhishek_types.join(', ') : bhakt.abhishek_types}</p>
-                    <p><strong>Valid until:</strong> ${this.formatDate(bhakt.expiration_date)}</p>
-                    <p><strong>Upcoming Sacred Dates:</strong></p>
-                    <ul>
-            `;
-            relevantDates
-                .filter(date => new Date(date.date) >= new Date())
-                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                .slice(0, 5)
-                .forEach(date => {
-                    html += `<li>${date.abhishek_type} - ${this.formatDate(date.date)}</li>`;
-                });
-            html += '</ul></div>';
-        });
-
-        html += '</div>';
-        combinedContent.innerHTML = html;
-    }
+    html += '</div>';
+    combinedContent.innerHTML = html;
+}
 
     // Generate labels based on selected Abhishek Type
 async generateLabels() {
@@ -1037,22 +1055,23 @@ exportLabelsToPDF() {
   const labels = this.bhakts.filter(b => new Date(b.expiration_date) >= new Date());
   if (!labels.length) { alert('No active bhakts found.'); return; }
 
-  // --- Label size ---
+  // --- Label layout ---
   const labelW = 100;
   const labelH = 44;
   const cols = 2;
   const rows = 6;
+  const gap = 2; // Gap between labels
 
-  // Margins to center labels on A4
   const pageW = 210, pageH = 297;
-  const leftMargin = (pageW - cols * labelW) / 2;
-  const topMargin = (pageH - rows * labelH) / 2;
+  const totalW = cols * labelW + (cols - 1) * gap;
+  const totalH = rows * labelH + (rows - 1) * gap;
 
-  // --- Text formatting ---
+  const leftMargin = (pageW - totalW) / 2;
+  const topMargin = (pageH - totalH) / 2;
+
   const paddingX = 4;
   const paddingY = 6;
   const baseFontSize = 11;
-  let lineHeight = baseFontSize * 0.3528 * 1.2; // pt → mm
 
   labels.forEach((b, i) => {
     if (i > 0 && i % (cols * rows) === 0) doc.addPage();
@@ -1061,40 +1080,40 @@ exportLabelsToPDF() {
     const col = rel % cols;
     const row = Math.floor(rel / cols);
 
-    const x = leftMargin + col * labelW;
-    const y = topMargin + row * labelH;
+    const x = leftMargin + col * (labelW + gap);
+    const y = topMargin + row * (labelH + gap);
 
-    // Prepare text lines
+    // Prepare text
     const maxTextW = labelW - paddingX * 2;
-    let lines = [];
-    lines.push(...doc.splitTextToSize(`Name: ${b.name || ''}`, maxTextW));
-    lines.push(...doc.splitTextToSize(`Address: ${b.address || ''}`, maxTextW));
-    if (includeMobile) {
-      lines.push(...doc.splitTextToSize(`Mobile: ${b.mobile_number || ''}`, maxTextW));
+    let lines = [
+      ...doc.splitTextToSize(`${b.name || ''}`, maxTextW),
+      ...doc.splitTextToSize(`${b.address || ''}`, maxTextW)
+    ];
+    if (includeMobile)
+      lines.push(...doc.splitTextToSize(`${b.mobile_number || ''}`, maxTextW));
+
+    // Adjust font size to fit
+    let fontSize = baseFontSize;
+    doc.setFontSize(fontSize);
+    let lineHeight = fontSize * 0.3528 * 1.2;
+    while (lines.length * lineHeight > labelH - paddingY * 2 && fontSize > 6) {
+      fontSize -= 0.5;
+      doc.setFontSize(fontSize);
+      lineHeight = fontSize * 0.3528 * 1.2;
+      lines = [
+        ...doc.splitTextToSize(`${b.name || ''}`, maxTextW),
+        ...doc.splitTextToSize(`${b.address || ''}`, maxTextW)
+      ];
+      if (includeMobile)
+        lines.push(...doc.splitTextToSize(`${b.mobile_number || ''}`, maxTextW));
     }
 
-    // Adjust font size if text too tall
-   let fontSize = baseFontSize;
-doc.setFontSize(fontSize);  // Reset font size at start of label
-lineHeight = fontSize * 0.3528 * 1.2;
-
-// Adjust font size if text too tall
-while (lines.length * lineHeight > labelH - paddingY * 2 && fontSize > 6) {
-  fontSize -= 0.5;
-  doc.setFontSize(fontSize); // Update font for this label
-  lineHeight = fontSize * 0.3528 * 1.2;
-  lines = [];
-  lines.push(...doc.splitTextToSize(`Name: ${b.name || ''}`, maxTextW));
-  lines.push(...doc.splitTextToSize(`Address: ${b.address || ''}`, maxTextW));
-  if (includeMobile) lines.push(...doc.splitTextToSize(`Mobile: ${b.mobile_number || ''}`, maxTextW));
-}
-
-
+    // --- Draw label border ---
     doc.setDrawColor(0);
-    doc.setLineWidth(0.25);
+    doc.setLineWidth(0.5);
     doc.rect(x, y, labelW, labelH);
 
-    // Print lines
+    // --- Print text ---
     let textX = x + paddingX;
     let textY = y + paddingY + fontSize * 0.3528;
     lines.forEach(line => {
@@ -1105,8 +1124,6 @@ while (lines.length * lineHeight > labelH - paddingY * 2 && fontSize > 6) {
 
   doc.save("labels-100x44.pdf");
 }
-
-
 
 
 

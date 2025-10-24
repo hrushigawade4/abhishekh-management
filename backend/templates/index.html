@@ -34,6 +34,9 @@
       <button class="nav-btn" data-page="combined">Combined View</button>
       <button class="nav-btn" data-page="settings">Settings</button>
     </nav>
+    <nav style="float:right;">
+    <a href="{{ url_for('logout') }}" id="logout-btn">Logout</a>
+  </nav>
   </div>
 </header>
 
@@ -85,8 +88,12 @@
                     <h2>Register New Bhakt</h2>
                     <form id="register-form" class="form">
                         <div class="form-group">
-                            <label for="name">Name *</label>
-                            <input type="text" id="name" name="name" required>
+                        <label for="registration-number">Registration Number *</label>
+                        <input type="text" id="registration-number" name="registration_number" required>
+                        </div>
+                        <div class="form-group">
+                        <label for="name">Name *</label>
+                        <input type="text" id="name" name="name" required>
                         </div>
                         <div class="form-group">
                             <label for="mobile">Mobile Number *</label>
@@ -105,12 +112,12 @@
                             <textarea id="address" name="address" required></textarea>
                         </div>
                        <div class="form-group">
-    <label>Abhishek Types *</label>
-    <div class="checkbox-group" id="abhishek-types">
-        <!-- Checkboxes will be injected here by JS -->
-    </div>
-</div>
-                        <div class="form-row">
+                                    <label>Abhishek Types *</label>
+                                    <div class="checkbox-group" id="abhishek-types">
+                                        <!-- Checkboxes will be injected here by JS -->
+                                    </div>
+                                </div>
+                            <div class="form-row">
                             <div class="form-group">
                                 <label for="start-date">Start Date *</label>
                                 <input type="date" id="start-date" name="start_date" required>
@@ -231,7 +238,7 @@
             </label>
             <button id="generate-labels-btn" class="btn btn-outline">Generate Labels</button>
             <button id="export-labels-pdf" class="btn btn-success" style="margin-left:8px;">Download Labels PDF</button>
-            <button id="export-full-schedule" class="btn btn-outline">Export Full Monthly Schedule</button>
+            
         </div>
         
     </div>
@@ -249,22 +256,43 @@
                 </div>
             </div>
             <div id="settings" class="page">
-    <h2>Settings</h2>
-     <button id="backup-db" class="btn btn-outline">Backup Database</button>
-<form id="restore-db-form" enctype="multipart/form-data" style="display:inline;">
-    <input type="file" id="restore-db-file" name="file" style="display:none;">
-    <button type="button" id="restore-db-btn" class="btn btn-outline">Restore Database</button>
-</form>
-<div style="margin-top:20px;">
-    <input type="email" id="backup-email" placeholder="Enter Gmail address" class="form-control" style="max-width:220px;">
-    <button id="send-db-backup" class="btn btn-outline">Send DB Backup to Gmail</button>
-</div>
-    <p style="font-size:10px; color:#bbb; margin-top:20px; opacity:0.5;">
-        Admin access required for backup and restore.
-    </p>
-</div>
-        </main>
-    </div>
+                <div class="settings-wrapper">
+                    <h2>Settings</h2>
+                    <button id="backup-db" class="btn btn-outline">Backup Database</button>
+                    <form id="restore-db-form" enctype="multipart/form-data" style="display:inline;">
+                    <input type="file" id="restore-db-file" name="file" style="display:none;">
+                    <button type="button" id="restore-db-btn" class="btn btn-outline">Restore Database</button>
+                    </form>
+                    <div style="margin-top:20px;">
+                        <input type="email" id="backup-email" placeholder="Enter Gmail address" class="form-control" style="max-width:220px;">
+                        <button id="send-db-backup" class="btn btn-outline">Send DB Backup to Gmail</button>
+                    </div>
+                    <p style="font-size:10px; color:#bbb; margin-top:20px; opacity:0.5;">
+                        Admin access required for backup and restore.
+                    </p>
+
+            <!-- Change password form -->
+            <hr style="margin:16px 0;">
+            <h3>Change Password</h3>
+            <form id="change-password-form" action="{{ url_for('change_password') }}" method="POST" style="max-width:400px;">
+                <div class="form-group">
+                    <label for="current-password">Current Password</label>
+                    <input type="password" id="current-password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password</label>
+                    <input type="password" id="new-password" name="new_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password</label>
+                    <input type="password" id="confirm-password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Change Password</button>
+            </form>
+            </div>
+                </main>
+            </div>
+
 
     
 
