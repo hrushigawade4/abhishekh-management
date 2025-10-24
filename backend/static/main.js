@@ -1,4 +1,4 @@
-// import { faker } from '@faker-js/faker';
+// import { faker } from '@faker-js/faker};
 
 class BhaktManagementSystem {
     constructor() {
@@ -87,6 +87,13 @@ class BhaktManagementSystem {
         document.getElementById('export-pdf').addEventListener('click', () => {
             this.exportPDF();
         });
+
+        // Export all active bhakts to PDF (Pournima All List)
+        const exportActiveBtn = document.getElementById('export-active-bhakts-pdf');
+        if (exportActiveBtn) {
+            exportActiveBtn.addEventListener('click', () => this.exportActiveBhaktsToPDF());
+        }
+        
          document.getElementById('export-bhakts').addEventListener('click', () => {
         window.open('/export/bhakts', '_blank');
     });
@@ -855,7 +862,6 @@ async renewBhakt(id) {
     this.downloadFile(csv, `schedule-${abhishekType}.csv`, 'text/csv');
 }
 
-
 // Replace your existing exportPDF() method with this:
 exportPDF() {
     if (!window.jspdf) {
@@ -928,6 +934,75 @@ exportPDF() {
 
     doc.save(`schedule-${abhishekType}.pdf`);
 }
+// ...existing code...
+exportActiveBhaktsToPDF() {
+    if (!window.jspdf) {
+        alert('jsPDF library is not loaded!');
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+
+    // Filter only active bhakts
+    const today = new Date();
+    const participants = this.bhakts
+        .filter(b => {
+            try { return new Date(b.expiration_date) >= today; } catch { return false; }
+        })
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (participants.length === 0) {
+        alert('No active bhakts found.');
+        return;
+    }
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    const margin = 15;
+    const colWidth = (pageWidth - margin * 2) / 2;
+    const rowHeight = 10;
+
+    // Title
+    doc.setFontSize(16);
+    doc.text('Pournima All Active Bhakts', pageWidth / 2, 20, { align: 'center' });
+
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+
+    let y = 30;
+
+    for (let i = 0; i < participants.length; i += 2) {
+        if (y + rowHeight > pageHeight - 15) {
+            doc.addPage();
+            y = 25;
+
+            // Repeat title on each new page
+            doc.setFontSize(14);
+            doc.text('Pournima — Active Bhakts', pageWidth / 2, 20, { align: 'center' });
+            doc.setFontSize(11);
+        }
+
+        const left = participants[i];
+        const right = participants[i + 1];
+
+        const leftText = `${left.name || ''} (${left.gotra || '-'})`;
+        const rightText = right ? `${right.name || ''} (${right.gotra || '-'})` : '';
+
+        // Left column cell
+        doc.rect(margin, y, colWidth, rowHeight);
+        doc.text(leftText, margin + 3, y + 7);
+
+        // Right column cell
+        doc.rect(margin + colWidth, y, colWidth, rowHeight);
+        if (rightText) doc.text(rightText, margin + colWidth + 3, y + 7);
+
+        y += rowHeight;
+    }
+
+    doc.save('pournima_active_bhakts.pdf');
+}
+// ...existing code...
     
     downloadFile(content, filename, type) {
         const blob = new Blob([content], { type });

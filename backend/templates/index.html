@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bhakt Management System</title>
+    <!-- keep only one jspdf, then autotable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
@@ -224,6 +224,8 @@
             <button id="export-filtered-csv" class="btn btn-outline" style="margin-left:8px;">Export Filtered CSV</button>
             <button id="export-pdf" class="btn btn-outline">Export Filtered PDF</button>
             <button id="export-csv" class="btn btn-outline">Export CSV</button>
+           <button id="export-active-bhakts-pdf" class="btn btn-outline">Pournima All List</button>
+
         </div>
         <div class="scheduler-controls" style="margin-top:16px;">
             <!-- Other export options -->
