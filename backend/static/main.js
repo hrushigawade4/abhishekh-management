@@ -456,13 +456,48 @@ const combinedSearch = document.getElementById('combined-search');
     }
 
     searchBhakts(query) {
-        const filtered = this.bhakts.filter(bhakt =>
-            bhakt.name.toLowerCase().includes(query.toLowerCase()) ||
-            (bhakt.mobile_number || bhakt.mobile).includes(query) ||
-            (bhakt.email_address || bhakt.email || '').toLowerCase().includes(query.toLowerCase())
-            (bhakt.registration_number || '').toLowerCase().includes(query)
-        );
+        query = (query || '').trim();
         const tbody = document.getElementById('bhakts-tbody');
+
+        // If empty query show all
+        if (!query) {
+            if (tbody) tbody.innerHTML = this.bhakts.map(bhakt => this.createBhaktRow(bhakt)).join('');
+            return;
+        }
+
+        const qLower = query.toLowerCase();
+        const qDigits = query.replace(/\D/g, '');
+
+        const filtered = this.bhakts.filter(bhakt => {
+            const name = (bhakt.name || '').toLowerCase();
+            const reg = (bhakt.registration_number || '').toString().toLowerCase();
+            const mobile = (bhakt.mobile_number || bhakt.mobile || '').toString();
+            const mobileDigits = mobile.replace(/\D/g, '');
+            const email = (bhakt.email_address || bhakt.email || '').toLowerCase();
+            const abhishek = Array.isArray(bhakt.abhishek_types)
+                ? bhakt.abhishek_types.join(', ').toLowerCase()
+                : (bhakt.abhishek_types || '').toString().toLowerCase();
+            const address = (bhakt.address || '').toLowerCase();
+
+            // Textual partial matches
+            if (
+                name.includes(qLower) ||
+                reg.includes(qLower) ||
+                email.includes(qLower) ||
+                abhishek.includes(qLower) ||
+                address.includes(qLower)
+            ) {
+                return true;
+            }
+
+            // Mobile matches: substring or digit-only match
+            if (mobile.includes(query) || (qDigits && mobileDigits.includes(qDigits))) {
+                return true;
+            }
+
+            return false;
+        });
+
         if (tbody) {
             tbody.innerHTML = filtered.map(bhakt => this.createBhaktRow(bhakt)).join('');
         }
