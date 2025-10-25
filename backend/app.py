@@ -8,6 +8,9 @@ from io import StringIO
 from flask import make_response
 import sqlite3
 from datetime import date
+import webbrowser
+from threading import Timer
+from waitress import serve
 import sys
 import smtplib
 import webbrowser
@@ -939,9 +942,10 @@ def upgrade_data():
             bhakt.registration_number = str(bhakt.registration_number).zfill(2)
         db.session.commit()
 
+def open_browser():
+    webbrowser.open("http://127.0.0.1:5000/")
 if __name__ == '__main__':
     
-    # This runs Flask in development mode.
-    # For production, we'll use a production-ready WSGI server like Waitress.
-    app.run(debug=True, host='127.0.0.1', port=5000)
-
+    Timer(1, open_browser).start()
+    # Use Waitress for production-like EXE
+    serve(app, host='127.0.0.1', port=5000)

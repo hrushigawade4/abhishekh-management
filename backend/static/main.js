@@ -230,25 +230,43 @@ const combinedSearch = document.getElementById('combined-search');
 
    // ...existing code...
     async loadBhakts() {
-        this.loadCombinedView();
         try {
             const response = await fetch('/bhakts');
-            if (!response.ok) throw new Error('Failed to fetch bhakts');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
 
-            // Normalize registration_number (use common alternative keys or id as fallback)
-            this.bhakts = (Array.isArray(data) ? data : (data.bhakts || []))
-    .map(b => ({
-        ...b,
-        registration_number: b.registration_number || b.registration_no || b.registration || b.reg_no || b.regNumber || ''
-    }));
-
-            const tbody = document.getElementById('bhakts-tbody');
-            if (tbody) {
-                tbody.innerHTML = this.bhakts.map(bhakt => this.createBhaktRow(bhakt)).join('');
+            if (!Array.isArray(data)) {
+                console.error('Expected array from /bhakts, got:', data);
+                this.bhakts = [];
+                return;
             }
+
+            // Normalize each bhakt: ensure registration_number exists and abhishek_types is an array
+            this.bhakts = data.map(b => {
+                const reg = b.registration_number
+                    ?? b.reg_no
+                    ?? b.regNo
+                    ?? b.registration
+                    ?? b.reg_number
+                    ?? b.reg
+                    ?? null;
+
+                const types = Array.isArray(b.abhishek_types)
+                    ? b.abhishek_types
+                    : (b.abhishek_types ? b.abhishek_types.toString().split(',').map(s => s.trim()) : []);
+
+                return {
+                    ...b,
+                    registration_number: reg,
+                    abhishek_types: types
+                };
+            });
+
+            console.log('Loaded bhakts (normalized):', this.bhakts);
+            this.loadCombinedView();
         } catch (error) {
-            alert('Error loading bhakts: ' + error.message);
+            console.error('Error in loadBhakts():', error);
+            this.bhakts = [];
         }
     }
 // ...existing code...
@@ -904,18 +922,16 @@ exportPDF() {
         alert('jsPDF library is not loaded!');
         return;
     }
-
     const { jsPDF } = window.jspdf;
 
-    const abhishekType = document.getElementById('abhishek-type-filter').value;
+    const abhishekType = document.getElementById('abhishek-type-filter')?.value;
     if (!abhishekType) {
         alert('Please select an Abhishek Type.');
         return;
     }
 
-    // Filter bhakts who match this abhishek type
-    const participants = this.bhakts.filter(b =>
-        (Array.isArray(b.abhishek_types) ? b.abhishek_types : (b.abhishek_types || '').toString().split(',')).includes(abhishekType)
+    const participants = (this.bhakts || []).filter(b =>
+        (b.abhishek_types || []).includes(abhishekType)
     );
 
     if (participants.length === 0) {
@@ -929,13 +945,13 @@ exportPDF() {
 
     const margin = 15;
     const colWidth = (pageWidth - margin * 2) / 2;
-    const rowHeight = 10;
-
+    const rowHeight = 10; // smaller row since everything is on one line
+    doc.setFont("calibri", "normal");
     // Title
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.text(`Schedule for ${abhishekType}`, pageWidth / 2, 20, { align: 'center' });
-
-    doc.setFontSize(11);
+    
+    doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
 
     let y = 30;
@@ -943,34 +959,33 @@ exportPDF() {
     for (let i = 0; i < participants.length; i += 2) {
         if (y + rowHeight > pageHeight - 15) {
             doc.addPage();
-            y = 25;
-
-            // Repeat title on each new page
+            y = 30;
             doc.setFontSize(14);
             doc.text(`Schedule for ${abhishekType}`, pageWidth / 2, 20, { align: 'center' });
-            doc.setFontSize(11);
+            doc.setFontSize(10);
         }
 
         const left = participants[i];
         const right = participants[i + 1];
 
-        const leftText = `${left.name || ''} (${left.gotra || '-'})`;
-        const rightText = right ? `${right.name || ''} (${right.gotra || '-'})` : '';
-
         // Left column cell
         doc.rect(margin, y, colWidth, rowHeight);
-        doc.text(leftText, margin + 3, y + 7);
+        const leftText = `(${left.registration_number ?? 'N/A'}) ${left.name ?? ''} (${left.gotra ?? '-'})`;
+        doc.text(leftText, margin + 2, y + 7);
 
         // Right column cell
         doc.rect(margin + colWidth, y, colWidth, rowHeight);
-        if (rightText) doc.text(rightText, margin + colWidth + 3, y + 7);
+        if (right) {
+            const rightText = `(${right.registration_number ?? 'N/A'}) ${right.name ?? ''} (${right.gotra ?? '-'})`;
+            doc.text(rightText, margin + colWidth + 2, y + 7);
+        }
 
         y += rowHeight;
     }
 
     doc.save(`schedule-${abhishekType}.pdf`);
 }
-// ...existing code...
+
 exportActiveBhaktsToPDF() {
     if (!window.jspdf) {
         alert('jsPDF library is not loaded!');
@@ -999,11 +1014,12 @@ exportActiveBhaktsToPDF() {
     const colWidth = (pageWidth - margin * 2) / 2;
     const rowHeight = 10;
 
-    // Title
-    doc.setFontSize(16);
-    doc.text('Pournima All Active Bhakts', pageWidth / 2, 20, { align: 'center' });
+    // Set font to Calibri if embedded
+    // doc.setFont("calibri", "normal");
+    doc.setFontSize(17); // Title font slightly bigger
+    doc.text('Pournima — All Active Bhakts', pageWidth / 2, 20, { align: 'center' });
 
-    doc.setFontSize(11);
+    doc.setFontSize(11); // Content slightly bigger
     doc.setTextColor(0, 0, 0);
 
     let y = 30;
@@ -1022,22 +1038,23 @@ exportActiveBhaktsToPDF() {
         const left = participants[i];
         const right = participants[i + 1];
 
-        const leftText = `${left.name || ''} (${left.gotra || '-'})`;
-        const rightText = right ? `${right.name || ''} (${right.gotra || '-'})` : '';
+        const leftText = `(${left.registration_number ?? 'N/A'}) ${left.name || ''} (${left.gotra || '-'})`;
+        const rightText = right ? `(${right.registration_number ?? 'N/A'}) ${right.name || ''} (${right.gotra || '-'})` : '';
 
         // Left column cell
         doc.rect(margin, y, colWidth, rowHeight);
-        doc.text(leftText, margin + 3, y + 7);
+        doc.text(leftText, margin + 2, y + 7);
 
         // Right column cell
         doc.rect(margin + colWidth, y, colWidth, rowHeight);
-        if (rightText) doc.text(rightText, margin + colWidth + 3, y + 7);
+        if (rightText) doc.text(rightText, margin + colWidth + 2, y + 7);
 
         y += rowHeight;
     }
 
     doc.save('pournima_active_bhakts.pdf');
 }
+
 // ...existing code...
     
     downloadFile(content, filename, type) {

@@ -1,14 +1,12 @@
 from app import app
-from models import Bhakt, SacredDate
+from models import db, Bhakt
 
-with app.app_context():
-    bhakts = Bhakt.query.all()
-    sacred_dates = SacredDate.query.all()
+if __name__ == '__main__':
+    with app.app_context():
+        # create tables if they don't exist
+        db.create_all()
+        bhakts = Bhakt.query.all()
+        print('Bhakts count:', len(bhakts))
+        for b in bhakts:
+            print(b.id, b.registration_number, b.name)
 
-    print("Bhakts:")
-    for b in bhakts:
-        print(b.registration_number, b.name, b.abhishek_types)
-
-    print("\nSacred Dates:")
-    for sd in sacred_dates:
-        print(sd.abhishek_type, sd.date)
