@@ -422,6 +422,7 @@ const combinedSearch = document.getElementById('combined-search');
         const status = this.getBhaktStatus(bhakt.expiration_date);
         return `
             <tr>
+                <td>${bhakt.registration_number}</td>
                 <td>${bhakt.name}</td>
                 <td>${bhakt.mobile_number || bhakt.mobile}</td>
                 <td>${bhakt.gotra || '-'}</td>
